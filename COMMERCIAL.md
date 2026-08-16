@@ -4,24 +4,25 @@
 
 Killcord 0.1.x is released under the MIT License and will remain MIT permanently.
 You can use, modify, and distribute it for any purpose including commercial use
-without restriction.
+without restriction. See [LICENSE](LICENSE).
 
-## Upcoming releases (0.2.0+): Business Source License
+## Upcoming releases (0.2.0+): Business Source License 1.1
 
 Starting from version 0.2.0, new Killcord releases will ship under the
-[Business Source License 1.1](https://mariadb.com/bsl11/).
+[Business Source License 1.1](https://mariadb.com/bsl11/) with the following parameters:
 
-**Permitted without a commercial license:**
-- Personal use
-- Educational use
-- Evaluation and development
-- Non-production deployments (testing, staging, local development)
+| Parameter | Value |
+|---|---|
+| Licensor | Driftflow LLC, an Ohio limited liability company |
+| Additional Use Grant | Personal, educational, evaluation, and non-production use (testing, staging, local development) |
+| Change Date | Four years from each version's release date |
+| Change License | Apache License 2.0 |
 
-**Requires a commercial license:**
-- Production use inside a company or organisation
+**Production use inside a company or organisation requires a commercial license.**
 
-The BSL includes a conversion clause: each 0.2.x release will automatically
-convert to MIT four years after its release date.
+Each 0.2.x release automatically converts to Apache 2.0 four years after its
+individual release date. The BSL is not a "source-available but closed" licence —
+it is time-limited and converts to a true open-source licence on a fixed schedule.
 
 ## Privacy
 
@@ -39,7 +40,6 @@ You can verify this independently: `node scripts/verify-no-telemetry.mjs`
 
 ## Commercial licensing enquiries
 
-Open a GitHub issue with the title "Commercial license enquiry":
-https://github.com/landonelder2410/killcord/issues/new?title=Commercial+license+enquiry
+Contact: [licensing@driftflow.com](mailto:licensing@driftflow.com)
 
 Include your company name, intended use, and approximate scale.
