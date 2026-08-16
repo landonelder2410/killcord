@@ -4,13 +4,15 @@ const GITHUB_URL  = 'https://github.com/landonelder2410/killcord';
 const NPM_URL     = 'https://www.npmjs.com/package/killcord';
 const INSTALL_CMD = 'npm install -g killcord';
 
-const FRAMEWORK_SNIPPETS = [
+/* Shown in the "What it looks like" section.
+   Comments mark exactly what the user adds. */
+const INTEGRATION_SNIPPETS = [
   {
     label: 'Anthropic SDK',
     code: `import anthropic
 
 client = anthropic.Anthropic(
-    base_url="http://localhost:8080",
+    base_url="http://localhost:8080",  # add this
 )`,
   },
   {
@@ -18,7 +20,7 @@ client = anthropic.Anthropic(
     code: `from openai import OpenAI
 
 client = OpenAI(
-    base_url="http://localhost:8080/v1",
+    base_url="http://localhost:8080/v1",  # add this
 )`,
   },
   {
@@ -26,24 +28,8 @@ client = OpenAI(
     code: `from langchain_anthropic import ChatAnthropic
 
 llm = ChatAnthropic(
-    anthropic_api_url="http://localhost:8080",
+    anthropic_api_url="http://localhost:8080",  # add this
 )`,
-  },
-  {
-    label: 'AutoGen',
-    code: `from autogen import AssistantAgent
-
-agent = AssistantAgent(
-    "assistant",
-    llm_config={"base_url": "http://localhost:8080"},
-)`,
-  },
-  {
-    label: 'CrewAI',
-    code: `import os
-os.environ["ANTHROPIC_BASE_URL"] = "http://localhost:8080"
-
-# rest of your CrewAI setup unchanged`,
   },
 ];
 
@@ -83,10 +69,10 @@ export default function Home() {
         </section>
 
         {/* ── TERMINAL DEMO ─────────────────────────────────────────────
-            Content sized to fit 375px viewport without horizontal scroll.
-            Max line length ~31 chars at 14px Geist Mono (8.4px/char):
-            335px content area - 40px demo-body padding = 295px / 8.4 ≈ 35ch.
-            Query strings dropped — tool name rotation is the point anyway.  */}
+            All lines ≤ 30ch at 14px Geist Mono — fits 375px viewport.
+            Content area: 375 - 40px padding - 2px border - 40px demo-body
+            padding = 293px / 8.4px per char ≈ 34ch.
+            JSON "error" field dropped (42ch) — shown in full in How it works. */}
         <div className="demo-wrap">
           <div className="demo-terminal">
             <div className="demo-titlebar">
@@ -104,16 +90,73 @@ export default function Home() {
   `}<span className="t-dim">turn 3</span>{`  `}<span className="t-tool">{`lookup_docs `}</span>{`  `}<span className="t-ok">ok</span>{`
   `}<span className="t-dim">turn 4</span>{`  `}<span className="t-tool">{`find_docs   `}</span>{`  `}<span className="t-trip">TRIPPED</span>{`
 
-`}<span className="t-dim">{`  # exact-match   never fires
-  # semantic       0.969 at turn 4
+`}<span className="t-dim">{`  # exact-match: never fires
+  # semantic: 0.969 tripped
 `}</span>{`
   `}<span className="t-trip">429 Too Many Requests</span>{`
 
-  `}<span className="t-key">"error"</span>{`:      `}<span className="t-str">"circuit_breaker_tripped"</span>{`
   `}<span className="t-key">"mechanism"</span>{`:  `}<span className="t-str">"semantic"</span>{`
   `}<span className="t-key">"similarity"</span>{`: `}<span className="t-num">0.969</span>{`
   `}<span className="t-key">"retry_after"</span>{`: `}<span className="t-num">60</span>
               </pre>
+            </div>
+          </div>
+        </div>
+
+        {/* ── EVIDENCE BLOCK — comparison table + measured numbers ────── */}
+        <div className="evidence-block">
+
+          {/* Capability comparison */}
+          <div className="cap-table-wrap">
+            <div className="cap-table">
+              <div className="cap-header">
+                <span className="cap-h-label" />
+                <span>repeated calls</span>
+                <span>rephrased args</span>
+                <span>rotated names</span>
+                <span>needs process</span>
+              </div>
+              <div className="cap-row">
+                <span className="cap-label">Iteration caps</span>
+                <span className="cap-yes">yes</span>
+                <span className="cap-no">—</span>
+                <span className="cap-no">—</span>
+                <span className="cap-no">—</span>
+              </div>
+              <div className="cap-row">
+                <span className="cap-label">Spend caps</span>
+                <span className="cap-no">—</span>
+                <span className="cap-no">—</span>
+                <span className="cap-no">—</span>
+                <span className="cap-no">—</span>
+              </div>
+              <div className="cap-row cap-row--killcord">
+                <span className="cap-label">Killcord</span>
+                <span className="cap-yes">yes</span>
+                <span className="cap-yes">yes</span>
+                <span className="cap-yes">yes</span>
+                <span className="cap-local">local proxy</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Measured numbers */}
+          <div className="stats-row">
+            <div className="stat-item">
+              <div className="stat-num">0.94</div>
+              <div className="stat-label">similarity threshold</div>
+            </div>
+            <div className="stat-item">
+              <div className="stat-num">~3ms</div>
+              <div className="stat-label">per request</div>
+            </div>
+            <div className="stat-item">
+              <div className="stat-num">5-turn</div>
+              <div className="stat-label">sliding window</div>
+            </div>
+            <div className="stat-item">
+              <div className="stat-num">0 bytes</div>
+              <div className="stat-label">transmitted</div>
             </div>
           </div>
         </div>
@@ -200,17 +243,15 @@ export default function Home() {
 
 {
   "error":       "circuit_breaker_tripped",
-  "reason":      "semantic_loop",
   "mechanism":   "semantic",
   "similarity":  0.969,
-  "detail":      "Tool call #4 is 96.9% semantically similar to 3 of the previous 3 calls.",
+  "detail":      "Tool call #4 is 96.9% similar to 3 of the previous 3 calls.",
   "retry_after": 60
 }`} />
             <pre>{`HTTP/1.1 429 Too Many Requests
 
 {
   "error":       "circuit_breaker_tripped",
-  "reason":      "semantic_loop",
   "mechanism":   "semantic",
   "similarity":  0.969,
   "detail":      "Tool call #4 is 96.9% similar to 3 of the previous 3 calls.",
@@ -222,7 +263,32 @@ export default function Home() {
           </p>
         </section>
 
-        {/* ── 4. RUNS ON YOUR MACHINE ────────────────────────────────── */}
+        {/* ── 4. WHAT IT LOOKS LIKE IN YOUR CODE ─────────────────────── */}
+        <section className="section" id="integration">
+          <p className="section-label">Integration</p>
+          <h2 className="section-h2">One line. Every framework.</h2>
+          <p className="section-body">
+            Point <code>base_url</code> at the local proxy. Nothing else changes — your framework,
+            your auth, your tool definitions, your retry logic. All untouched.
+          </p>
+          <div className="code-stacks">
+            {INTEGRATION_SNIPPETS.map(s => (
+              <div key={s.label} className="snippet-card">
+                <div className="snippet-header">
+                  <span className="snippet-label">{s.label}</span>
+                  <CopyButton text={s.code} />
+                </div>
+                <pre className="snippet-code">{s.code}</pre>
+              </div>
+            ))}
+          </div>
+          <p className="section-body muted">
+            AutoGen, CrewAI, and any other framework that accepts a base URL work the same way.
+            Node.js SDKs: pass <code>baseURL</code> instead of <code>base_url</code>.
+          </p>
+        </section>
+
+        {/* ── 5. RUNS ON YOUR MACHINE ────────────────────────────────── */}
         <section className="section section-highlight" id="privacy">
           <p className="section-label">Privacy and data handling</p>
           <h2 className="section-h2">Runs on your machine. Nothing leaves.</h2>
@@ -273,43 +339,28 @@ export default function Home() {
           </p>
         </section>
 
-        {/* ── 5. QUICKSTART ──────────────────────────────────────────── */}
+        {/* ── 6. QUICKSTART ──────────────────────────────────────────── */}
         <section className="section" id="quickstart">
           <p className="section-label">Quick start</p>
-          <h2 className="section-h2">One URL change. No other modifications.</h2>
+          <h2 className="section-h2">Install, start, point your agent.</h2>
 
           <div className="code-block">
-            <pre>{`# Install
-$ npm install -g killcord
+            <pre>{`$ npm install -g killcord
 
-# Start (downloads ~90 MB model on first run, then cached)
 $ killcord
-  Listening on http://localhost:8080
+  Listening on  http://localhost:8080
   Anthropic  →  https://api.anthropic.com
   OpenAI     →  https://api.openai.com`}</pre>
           </div>
 
-          <p className="section-body">Point your existing framework at the proxy:</p>
-
-          <div className="snippet-grid">
-            {FRAMEWORK_SNIPPETS.map(s => (
-              <div key={s.label} className="snippet-card">
-                <div className="snippet-header">
-                  <span className="snippet-label">{s.label}</span>
-                  <CopyButton text={s.code} />
-                </div>
-                <pre className="snippet-code">{s.code}</pre>
-              </div>
-            ))}
-          </div>
-
+          <p className="section-body">Override the upstream target if needed:</p>
           <div className="code-block">
             <pre>{`ANTHROPIC_UPSTREAM=https://api.anthropic.com killcord
 OPENAI_UPSTREAM=https://api.openai.com     killcord`}</pre>
           </div>
         </section>
 
-        {/* ── 6. LICENSING ───────────────────────────────────────────── */}
+        {/* ── 7. LICENSING ───────────────────────────────────────────── */}
         <section className="section" id="licensing">
           <p className="section-label">Licensing</p>
           <h2 className="section-h2">Free for personal and evaluation use.</h2>
