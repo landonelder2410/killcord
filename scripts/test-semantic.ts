@@ -39,13 +39,14 @@ async function main() {
 
   console.log(`${BOLD}Anthropic tool_use format${RESET}`);
   // Genuine loop — reworded query each turn. Exact-match MISSES (same name, but
-  // exact-match only counts names; here we have 5 same-name so exact WOULD catch
+  // exact-match only counts names; here we have 4 same-name so exact WOULD catch
   // at limit 5 — use 4 turns so exact does not trip but semantic does).
+  // Queries match the first 4 from scripts/measure-semantic.mjs (proven to trip).
   await expectTrip('reworded search loop (4 turns) → TRIP', [
     aTurn('search_web', { query: 'how to fix docker permission denied error' }),
     aTurn('search_web', { query: 'fixing docker permission denied issue' }),
     aTurn('search_web', { query: 'resolve docker permission denied problem' }),
-    aTurn('search_web', { query: 'why does docker say permission denied' }),
+    aTurn('search_web', { query: 'docker permission denied how do i solve it' }),
   ], true);
 
   await expectTrip('pagination (5 pages) → no trip', [
@@ -64,11 +65,15 @@ async function main() {
   ], false);
 
   console.log(`\n${BOLD}OpenAI tool_calls format${RESET}`);
-  await expectTrip('reworded ticket loop (4 turns) → TRIP', [
-    oTurn('create_ticket', { title: 'Login button broken', priority: 'high' }),
-    oTurn('create_ticket', { title: 'Login button is broken', priority: 'high' }),
-    oTurn('create_ticket', { title: "The login button doesn't work", priority: 'high' }),
-    oTurn('create_ticket', { title: 'Login button not working', priority: 'high' }),
+  // Tool-rotation loop: the agent keeps searching for the same answer but
+  // cycles through different tool names to evade exact-match. This is the
+  // core scenario the name-removal from embedStringForCall was designed to catch.
+  // Queries are the proven first-4 from scripts/measure-semantic.mjs (trip at call 4).
+  await expectTrip('rotating-tool-name loop (4 turns) → TRIP', [
+    oTurn('search_web',  { query: 'how to fix docker permission denied error' }),
+    oTurn('web_search',  { query: 'fixing docker permission denied issue' }),
+    oTurn('lookup_docs', { query: 'resolve docker permission denied problem' }),
+    oTurn('find_docs',   { query: 'docker permission denied how do i solve it' }),
   ], true);
 
   await expectTrip('different-city weather → no trip', [

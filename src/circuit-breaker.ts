@@ -264,6 +264,14 @@ function embedStringForCall(c: OrderedCall): string | null {
   return nl || null;
 }
 
+/** Returns the string that would be embedded for a tool call, using the same
+ *  logic as the production semantic circuit-breaker. Returns null when the call
+ *  has no embeddable NL content (e.g. pagination, ID lookups). Exported for
+ *  use in measurement and test scripts. */
+export function getEmbedStringForCall(name: string, input: unknown): string | null {
+  return embedStringForCall({ name, input });
+}
+
 // ── LRU embedding cache (by string hash) ────────────────────────────────────
 
 const EMBED_CACHE_MAX = 512;

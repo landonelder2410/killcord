@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /**
- * Semantic loop detection — measurement harness.
+ * Semantic loop detection — measurement harness (shipped code).
  *
- * Uses the SAME model and embed settings as the production path
- * (Xenova/all-MiniLM-L6-v2, mean pooling, L2 normalized, cosine = dot product).
+ * Uses the SAME model, embed settings, AND string-extraction logic as the
+ * production path. String extraction is imported directly from dist/ so this
+ * script can never drift from what ships.
  *
  * Answers three questions with real numbers:
  *   1. Per-request latency cost of embedding a call history.
@@ -11,7 +12,7 @@
  *      repeated calls? Prints actual pairwise scores.
  *   3. Where does it fail?
  *
- * Run: node scripts/measure-semantic.mjs
+ * Run: node scripts/measure-semantic.mjs   (requires npm run build first)
  */
 import { pipeline } from '@xenova/transformers';
 
@@ -34,21 +35,18 @@ function cosine(a, b) {
   return s;
 }
 
-function callString(name, input) {
-  return `${name}:${JSON.stringify(input)}`;
-}
-
 // ── Replicate scanHistoryForSemanticLoop's decision exactly ─────────────────
+// Operates only on the non-null vectors (calls with NL content).
 
-function evaluate(vectors) {
-  for (let i = REPEATS; i < vectors.length; i++) {
-    const start = Math.max(0, i - WINDOW);
+function evaluate(vecs) {
+  for (let p = REPEATS; p < vecs.length; p++) {
+    const start = Math.max(0, p - WINDOW);
     let matches = 0, best = 0, bestJ = -1;
-    for (let j = start; j < i; j++) {
-      const sc = cosine(vectors[i], vectors[j]);
+    for (let j = start; j < p; j++) {
+      const sc = cosine(vecs[p], vecs[j]);
       if (sc > THRESHOLD) { matches++; if (sc > best) { best = sc; bestJ = j; } }
     }
-    if (matches >= REPEATS) return { tripped: true, at: i, matches, best, bestJ };
+    if (matches >= REPEATS) return { tripped: true, at: p, matches, best, bestJ };
   }
   return { tripped: false };
 }
@@ -123,16 +121,27 @@ const SHOULD_NOT_TRIP = [
 
 // ── Pretty matrix ────────────────────────────────────────────────────────────
 
-async function analyze(seq) {
-  const strs = seq.calls.map(([n, i]) => callString(n, i));
-  const vecs = [];
-  for (const s of strs) vecs.push(await embed(s));
+async function analyze(seq, getEmbedStr) {
+  const entries = seq.calls.map(([n, i]) => ({ str: getEmbedStr(n, i), name: n, input: i }));
+  const comparable = entries.filter(e => e.str !== null);
 
   console.log(`\n  ${BOLD}${seq.name}${RESET}`);
-  for (const s of strs) console.log(`    ${DIM}${s}${RESET}`);
+  for (const e of entries) {
+    const label = e.str !== null ? e.str : `${DIM}[no NL content — skipped]${RESET}`;
+    console.log(`    ${DIM}${label}${RESET}`);
+  }
+
+  if (comparable.length < REPEATS + 1) {
+    console.log(`    ${DIM}(${comparable.length}/${entries.length} calls have NL content — too few to trip)${RESET}`);
+    console.log(`    → ${DIM}no trip${RESET}`);
+    return { min: 0, avg: 0, max: 0, tripped: false, skipped: true };
+  }
+
+  const vecs = [];
+  for (const e of comparable) vecs.push(await embed(e.str));
 
   // Pairwise upper-triangle scores.
-  console.log(`    ${DIM}pairwise cosine:${RESET}`);
+  console.log(`    ${DIM}pairwise cosine (${comparable.length} NL strings):${RESET}`);
   let min = 1, max = 0;
   const scores = [];
   for (let i = 0; i < vecs.length; i++) {
@@ -144,7 +153,6 @@ async function analyze(seq) {
     }
   }
   const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
-  // consecutive scores (i vs i+1)
   const consec = [];
   for (let i = 0; i + 1 < vecs.length; i++) consec.push(cosine(vecs[i], vecs[i + 1]));
 
@@ -153,7 +161,7 @@ async function analyze(seq) {
 
   const verdict = evaluate(vecs);
   const label = verdict.tripped
-    ? `${YEL}TRIPS${RESET} at call #${verdict.at + 1} (${verdict.matches} matches ≥ ${THRESHOLD}, best=${verdict.best.toFixed(3)} vs #${verdict.bestJ + 1})`
+    ? `${YEL}TRIPS${RESET} at NL-call #${verdict.at + 1} (${verdict.matches} matches ≥ ${THRESHOLD}, best=${verdict.best.toFixed(3)})`
     : `${DIM}no trip${RESET}`;
   console.log(`      → ${label}`);
   return { min, avg, max, tripped: verdict.tripped };
@@ -161,21 +169,20 @@ async function analyze(seq) {
 
 // ── Latency ──────────────────────────────────────────────────────────────────
 
-async function measureLatency() {
+async function measureLatency(getEmbedStr) {
   console.log(`\n${BOLD}═══ Latency ═══${RESET}`);
   // Realistic history: 15 tool calls (agent 15 turns deep).
-  const history = [];
-  for (let i = 0; i < 15; i++) history.push(callString('search_web', { query: `topic number ${i} to research in depth` }));
+  const rawHistory = [];
+  for (let i = 0; i < 15; i++) rawHistory.push(getEmbedStr('search_web', { query: `topic number ${i} to research in depth` }));
+  const history = rawHistory.filter(Boolean);
 
-  // Cold: embed all 15 fresh.
+  // Cold: embed all fresh.
   let t0 = performance.now();
   const vecs = [];
   for (const s of history) vecs.push(await embed(s));
   let cold = performance.now() - t0;
 
-  // Warm (cache hit): re-embed the same 15 — simulates LRU cache serving repeats.
-  // In production, cached strings are NOT re-embedded; this measures the pure
-  // pairwise-cosine cost once vectors are in hand.
+  // Warm: just pairwise cosine cost once vectors are in hand.
   t0 = performance.now();
   for (let i = REPEATS; i < vecs.length; i++)
     for (let j = Math.max(0, i - WINDOW); j < i; j++) cosine(vecs[i], vecs[j]);
@@ -185,15 +192,16 @@ async function measureLatency() {
   const single = [];
   for (let k = 0; k < 10; k++) {
     t0 = performance.now();
-    await embed(callString('do_thing', { n: k, note: 'a moderately sized argument payload' }));
+    const s = getEmbedStr('do_thing', { n: k, note: 'a moderately sized argument payload' });
+    if (s) await embed(s);
     single.push(performance.now() - t0);
   }
   single.sort((a, b) => a - b);
   const p50 = single[Math.floor(single.length / 2)];
 
-  console.log(`  Cold embed of 15-call history:  ${BOLD}${cold.toFixed(1)} ms${RESET}  (${(cold / 15).toFixed(1)} ms/call)`);
-  console.log(`  Pairwise cosine only (15 calls): ${BOLD}${compareOnly.toFixed(2)} ms${RESET}`);
-  console.log(`  Single embed (p50, warm model):  ${BOLD}${p50.toFixed(1)} ms${RESET}`);
+  console.log(`  Cold embed of ${history.length}-call history:   ${BOLD}${cold.toFixed(1)} ms${RESET}  (${(cold / history.length).toFixed(1)} ms/call)`);
+  console.log(`  Pairwise cosine only (${history.length} calls): ${BOLD}${compareOnly.toFixed(2)} ms${RESET}`);
+  console.log(`  Single embed (p50, warm model):   ${BOLD}${p50.toFixed(1)} ms${RESET}`);
   console.log(`  ${DIM}→ Steady state: only the newest 1–2 calls are uncached per request,`);
   console.log(`     so marginal cost ≈ ${p50.toFixed(1)} ms + <0.1 ms compare.${RESET}`);
 }
@@ -201,38 +209,50 @@ async function measureLatency() {
 // ── Main ───────────────────────────────────────────────────────────────────
 
 async function main() {
+  const { getEmbedStringForCall } = await import('../dist/circuit-breaker.js');
+
   console.log(`${BOLD}Loading MiniLM-L6-v2...${RESET}`);
   const tl = performance.now();
   embedder = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
   console.log(`Model ready in ${((performance.now() - tl) / 1000).toFixed(1)}s`);
   console.log(`\nDefaults: threshold=${THRESHOLD} window=${WINDOW} repeats=${REPEATS}`);
+  console.log(`Embed logic: shipped getEmbedStringForCall (NL-content only, no tool-name prefix)`);
 
   console.log(`\n${BOLD}═══ SHOULD TRIP (genuine loops) ═══${RESET}`);
   const tripStats = [];
-  for (const seq of SHOULD_TRIP) tripStats.push(await analyze(seq));
+  for (const seq of SHOULD_TRIP) tripStats.push(await analyze(seq, getEmbedStringForCall));
 
   console.log(`\n${BOLD}═══ SHOULD NOT TRIP (legitimate repeats) ═══${RESET}`);
   const noTripStats = [];
-  for (const seq of SHOULD_NOT_TRIP) noTripStats.push(await analyze(seq));
+  for (const seq of SHOULD_NOT_TRIP) noTripStats.push(await analyze(seq, getEmbedStringForCall));
 
-  await measureLatency();
+  await measureLatency(getEmbedStringForCall);
 
   // ── Separation verdict ─────────────────────────────────────────────────
   console.log(`\n${BOLD}═══ Separation at threshold ${THRESHOLD} ═══${RESET}`);
-  const tripCorrect = tripStats.filter(s => s.tripped).length;
+  const tripCorrect   = tripStats.filter(s => s.tripped).length;
   const noTripCorrect = noTripStats.filter(s => !s.tripped).length;
-  console.log(`  SHOULD TRIP caught:      ${tripCorrect}/3`);
-  console.log(`  SHOULD NOT TRIP passed:  ${noTripCorrect}/3`);
+  console.log(`  SHOULD TRIP caught:      ${tripCorrect}/${SHOULD_TRIP.length}`);
+  console.log(`  SHOULD NOT TRIP passed:  ${noTripCorrect}/${SHOULD_NOT_TRIP.length}`);
 
-  const maxTripMin = Math.min(...tripStats.map(s => s.avg));
-  const maxNoTripAvg = Math.max(...noTripStats.map(s => s.avg));
-  console.log(`\n  Lowest avg-similarity among SHOULD-TRIP:     ${maxTripMin.toFixed(3)}`);
-  console.log(`  Highest avg-similarity among SHOULD-NOT-TRIP: ${maxNoTripAvg.toFixed(3)}`);
-  if (maxNoTripAvg >= maxTripMin) {
-    console.log(`  ${RED}${BOLD}OVERLAP: legitimate repeats score as high or higher than genuine loops.${RESET}`);
-    console.log(`  ${RED}A single global cosine threshold cannot separate these cleanly.${RESET}`);
+  const tripMins  = tripStats.filter(s => !s.skipped).map(s => s.avg);
+  const noTripAvgs = noTripStats.filter(s => !s.skipped).map(s => s.avg);
+  if (tripMins.length && noTripAvgs.length) {
+    const lowestTrip   = Math.min(...tripMins);
+    const highestNoTrip = Math.max(...noTripAvgs);
+    console.log(`\n  Lowest avg-similarity among SHOULD-TRIP:     ${lowestTrip.toFixed(3)}`);
+    console.log(`  Highest avg-similarity among SHOULD-NOT-TRIP: ${highestNoTrip.toFixed(3)}`);
+    if (highestNoTrip >= lowestTrip) {
+      console.log(`  ${RED}${BOLD}OVERLAP: legitimate repeats score as high or higher than genuine loops.${RESET}`);
+      console.log(`  ${RED}A single global cosine threshold cannot separate these cleanly.${RESET}`);
+    } else {
+      console.log(`  ${GREEN}Clean separation — a threshold exists between the two classes.${RESET}`);
+    }
   } else {
-    console.log(`  ${GREEN}Clean separation — a threshold exists between the two classes.${RESET}`);
+    console.log(`\n  ${DIM}(SHOULD-NOT-TRIP cases have no NL content — trivially excluded from semantic detection)${RESET}`);
+    if (tripCorrect === SHOULD_TRIP.length) {
+      console.log(`  ${GREEN}${BOLD}All genuine loops caught; all legitimate repeats excluded. Clean.${RESET}`);
+    }
   }
 }
 
