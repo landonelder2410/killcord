@@ -27,6 +27,7 @@
     "semantic-search",
     "vector"
   ],
+  "author": "Driftflow LLC",
   "license": "MIT",
   "engines": {
     "node": ">=20.0.0"

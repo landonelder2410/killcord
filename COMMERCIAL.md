@@ -40,6 +40,8 @@ You can verify this independently: `node scripts/verify-no-telemetry.mjs`
 
 ## Commercial licensing enquiries
 
-Contact: [licensing@driftflow.com](mailto:licensing@driftflow.com)
+<!-- TODO: replace this GitHub issue link with a real licensing@ email address once set up -->
+Open an issue at:
+https://github.com/landonelder2410/killcord/issues/new
 
 Include your company name, intended use, and approximate scale.
