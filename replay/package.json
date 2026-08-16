@@ -1,0 +1,26 @@
+{
+  "name": "agent-replay",
+  "version": "0.1.0",
+  "description": "CLI tool and local web viewer for replaying AI agent traces",
+  "main": "dist/cli.js",
+  "bin": {
+    "agent-replay": "./bin/agent-replay.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": ["ai", "agent", "replay", "trace", "debug"],
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.19.2",
+    "open": "^10.1.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.14.0",
+    "tsx": "^4.15.7",
+    "typescript": "^5.5.2"
+  }
+}

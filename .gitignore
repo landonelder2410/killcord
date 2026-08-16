@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+web/node_modules/
+replay/node_modules/
+
+# Compiled output
+dist/
+replay/dist/
+web/.next/
+web/out/
+
+# Runtime state — never commit (contains license keys and customer data)
+.killcord-state.json
+.killcord-licenses.json
+
+# Trace output — contains redacted but sensitive request data
+.killcord/
+
+# Secrets — never commit
+.env
+.env.local
+.env.*.local
+
+# Allow the example template
+!.env.example
+
+# Vercel project link (machine-specific)
+web/.vercel/
+
+# Build info
+*.tsbuildinfo
+next-env.d.ts
+
+# Logs & OS
+*.log
+.DS_Store
+
+# Test output
+coverage/
