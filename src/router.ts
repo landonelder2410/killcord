@@ -12,8 +12,10 @@ import type {
 import { redactPII }                                          from './pii';
 import { record, estimateTokens }                            from './logger';
 import { writeTrace }                                        from './trace';
+import { embed, cosine }                                     from './embedder';
 import {
   scanHistoryForLoop,
+  scanHistoryForSemanticLoop,
   checkCrossRequestLimits,
   resolveSessionKey,
   parseCBHeaders,
@@ -21,6 +23,10 @@ import {
   type CBOptions,
 }                                                            from './circuit-breaker';
 import { classifyRequest }                                   from './complexity-router';
+
+// Re-exported so index.ts can warm the model at startup without importing the
+// embedder module directly.
+export { warmup } from './embedder';
 
 // Persistent keep-alive agent for all upstream LLM API connections — reuses TLS
 // sessions and TCP sockets across sequential fetch() calls, cutting per-request
@@ -30,50 +36,6 @@ setGlobalDispatcher(new Agent({
   keepAliveTimeout:    10_000,
   keepAliveMaxTimeout: 30_000,
 }));
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { pipeline, env } = require('@xenova/transformers');
-
-try {
-  env.backends.onnx.wasm.numThreads = 4;
-} catch (_) {
-  // Older versions may not expose this config; safe to ignore
-}
-
-type EmbedPipeline = (text: string, opts: Record<string, unknown>) => Promise<{ data: Float32Array }>;
-
-// Promise-based singleton — concurrent requests before the model resolves
-// all await the same promise instead of each starting a fresh download.
-let _embedderPromise: Promise<EmbedPipeline> | null = null;
-
-function getEmbedder(): Promise<EmbedPipeline> {
-  if (!_embedderPromise) {
-    _embedderPromise = (async () => {
-      console.log('[killcord] Loading embedding model (first run downloads ~90 MB to cache)...');
-      const model = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
-      console.log('[killcord] Embedding model ready.');
-      return model as EmbedPipeline;
-    })();
-  }
-  return _embedderPromise;
-}
-
-async function embed(text: string): Promise<Float32Array> {
-  const model = await getEmbedder();
-  const output = await model(text.slice(0, 512), { pooling: 'mean', normalize: true });
-  return output.data;
-}
-
-// Dot product of two L2-normalized vectors == cosine similarity
-function cosine(a: Float32Array, b: Float32Array): number {
-  let sum = 0;
-  for (let i = 0; i < a.length; i++) sum += a[i] * b[i];
-  return sum;
-}
-
-export async function warmup(): Promise<void> {
-  await getEmbedder();
-}
 
 export async function filterTools(
   prompt: string,
@@ -326,6 +288,31 @@ export function anthropicFilterMiddleware(upstreamBase: string) {
         return;
       }
 
+      // ── CIRCUIT BREAKER — SEMANTIC LOOP (embeddings, most expensive → last) ─
+      // Catches loops that rephrase their arguments each turn to slip past the
+      // exact-name counter above. Fails open: never blocks on a cold model.
+      const semanticResult = await scanHistoryForSemanticLoop(
+        body.messages as unknown as Array<Record<string, unknown>>,
+      );
+      if (semanticResult.tripped) {
+        console.warn(`[killcord/cb] Semantic loop detected. traceId=${traceId} similarity=${semanticResult.similarity?.toFixed(3)} detail=${semanticResult.detail}`);
+        fireWebhook({ event: 'circuit_breaker_tripped', traceId, ...semanticResult, endpoint: '/v1/messages', ts: new Date().toISOString() });
+        writeTrace({ traceId, timestamp: new Date().toISOString(), model: body.model ?? 'unknown',
+          latencyMs: Date.now() - startMs, upstreamStatus: 429, toolsOffered, toolsForwarded: [],
+          tokensIn: tokensReceived, tokensOut: 0,
+          steps: buildStepsFromMessages(body.messages),
+          circuitBreaker: { tripped: true, mechanism: 'semantic', reason: semanticResult.reason ?? null, detail: semanticResult.detail ?? null } });
+        res.status(429).json({
+          error:       'circuit_breaker_tripped',
+          reason:      semanticResult.reason,
+          mechanism:   'semantic',
+          similarity:  semanticResult.similarity,
+          detail:      semanticResult.detail,
+          retry_after: Math.ceil(parseInt(process.env.CB_WINDOW_MS ?? '60000', 10) / 1000),
+        });
+        return;
+      }
+
       // ── COMPLEXITY CLASSIFICATION ────────────────────────────────────────
       const lastUserMsg = extractAnthropicPrompt(body.messages);
       const complexity  = classifyRequest(lastUserMsg, toolsOffered.length, body.messages.length);
@@ -460,6 +447,29 @@ export function openaiFilterMiddleware(upstreamBase: string) {
           error:       'circuit_breaker_tripped',
           reason:      crossResult.reason,
           detail:      crossResult.detail,
+          retry_after: Math.ceil(parseInt(process.env.CB_WINDOW_MS ?? '60000', 10) / 1000),
+        });
+        return;
+      }
+
+      // ── CIRCUIT BREAKER — SEMANTIC LOOP (embeddings, most expensive → last) ─
+      const semanticResult = await scanHistoryForSemanticLoop(
+        body.messages as unknown as Array<Record<string, unknown>>,
+      );
+      if (semanticResult.tripped) {
+        console.warn(`[killcord/cb] Semantic loop detected. traceId=${traceId} similarity=${semanticResult.similarity?.toFixed(3)} detail=${semanticResult.detail}`);
+        fireWebhook({ event: 'circuit_breaker_tripped', traceId, ...semanticResult, endpoint: '/v1/chat/completions', ts: new Date().toISOString() });
+        writeTrace({ traceId, timestamp: new Date().toISOString(), model: body.model ?? 'unknown',
+          latencyMs: Date.now() - startMs, upstreamStatus: 429, toolsOffered: toolsOfferedNames, toolsForwarded: [],
+          tokensIn: tokensReceived, tokensOut: 0,
+          steps: buildStepsFromOAIMessages(body.messages),
+          circuitBreaker: { tripped: true, mechanism: 'semantic', reason: semanticResult.reason ?? null, detail: semanticResult.detail ?? null } });
+        res.status(429).json({
+          error:       'circuit_breaker_tripped',
+          reason:      semanticResult.reason,
+          mechanism:   'semantic',
+          similarity:  semanticResult.similarity,
+          detail:      semanticResult.detail,
           retry_after: Math.ceil(parseInt(process.env.CB_WINDOW_MS ?? '60000', 10) / 1000),
         });
         return;

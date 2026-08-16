@@ -1,9 +1,15 @@
 /**
- * Redis-backed circuit breaker for detecting rogue agent loops.
+ * Circuit breaker for detecting rogue agent loops.
  *
- * Two independent checks:
- *  1. scanHistoryForLoop       — stateless; reads tool_use/tool_calls in the messages array
- *  2. checkCrossRequestLimits  — Redis sliding-window; catches loops across requests
+ * Three independent checks, applied cheapest-first:
+ *  1. scanHistoryForLoop         — exact-match: counts identical tool NAMES in the
+ *                                  messages array. O(n), no model. Catches naive loops.
+ *  2. scanHistoryForSemanticLoop — semantic: embeds each tool call and trips when a
+ *                                  call is near-identical (cosine > threshold) to
+ *                                  several recent calls. Catches loops that rephrase
+ *                                  their arguments each turn to dodge exact-match.
+ *  3. checkCrossRequestLimits    — Redis/in-memory sliding-window; catches request
+ *                                  floods and token bursts across requests.
  *
  * Per-request overrides via request headers:
  *   x-killcord-loop-limit    — integer: overrides CB_TOOL_REPEAT_LIMIT for this request
@@ -17,13 +23,38 @@
  *   CB_TOOL_REPEAT_LIMIT  (default 5)      — max identical tool calls before trip
  *   CB_TOKEN_BURST_LIMIT  (default 50000)  — max estimated tokens per window per session
  *   CB_REQUEST_LIMIT      (default 30)     — max requests per window per session
+ *
+ * Semantic detection env vars:
+ *   KILLCORD_SEMANTIC_LOOP_ENABLED  (default true)  — master switch
+ *   KILLCORD_SEMANTIC_THRESHOLD     (default 0.94)  — cosine similarity to count a match
+ *   KILLCORD_SEMANTIC_WINDOW        (default 5)     — how many prior calls to compare against
+ *   KILLCORD_SEMANTIC_REPEATS       (default 3)     — matches within window required to trip
+ *   KILLCORD_SEMANTIC_INCLUDE_ARGS  (default false) — see note below
+ *
+ * NOTE on what gets embedded (measured deviation from a naive design):
+ *   Embedding the raw `name:JSON.stringify(input)` string does NOT separate genuine
+ *   loops from legitimate scalar-varying repeats. Measured on MiniLM-L6-v2: paginating
+ *   `list_orders {page:1..5}` scores avg cosine 0.973 — HIGHER than a genuinely
+ *   reworded loop (0.964) — because only a digit changes. A single global threshold
+ *   cannot separate them (see scripts/measure-semantic.mjs).
+ *   Fix (see scripts/measure-semantic-fix.mjs, 6/6 clean): embed only the
+ *   NATURAL-LANGUAGE content of each call (free-text string args). Pagination / ID
+ *   lookups have no NL content, so they cannot form a semantic loop and fall through
+ *   to exact-match only. Set KILLCORD_SEMANTIC_INCLUDE_ARGS=true to embed the full
+ *   JSON instead (higher recall, but pagination will false-positive).
  */
-import Redis from 'ioredis';
+import Redis                                        from 'ioredis';
+import { createHash }                               from 'node:crypto';
+import { getEmbedder, cosine, isEmbedderReady }     from './embedder';
 
 export interface CircuitBreakerResult {
   tripped: boolean;
-  reason?:  'tool_loop' | 'token_burst' | 'request_flood';
+  reason?:  'tool_loop' | 'token_burst' | 'request_flood' | 'semantic_loop';
   detail?:  string;
+  /** Which detection mechanism fired — surfaced in the 429 body and trace. */
+  mechanism?: 'exact' | 'semantic';
+  /** Cosine similarity of the offending call pair (semantic trips only). */
+  similarity?: number;
 }
 
 /** Per-request options parsed from x-killcord-* headers. */
@@ -39,6 +70,20 @@ const TOOL_LIMIT    = parseInt(process.env.CB_TOOL_REPEAT_LIMIT ?? '5',     10);
 const TOKEN_LIMIT   = parseInt(process.env.CB_TOKEN_BURST_LIMIT ?? '50000', 10);
 const REQUEST_LIMIT = parseInt(process.env.CB_REQUEST_LIMIT     ?? '30',    10);
 const REDIS_TIMEOUT = 500;
+
+// ── Semantic loop detection config ──────────────────────────────────────────
+
+const SEMANTIC_ENABLED = process.env.KILLCORD_SEMANTIC_LOOP_ENABLED !== 'false';
+
+function numEnv(name: string, def: number): number {
+  const v = parseFloat(process.env[name] ?? '');
+  return Number.isFinite(v) ? v : def;
+}
+
+const SEMANTIC_THRESHOLD    = numEnv('KILLCORD_SEMANTIC_THRESHOLD', 0.94);
+const SEMANTIC_WINDOW       = Math.max(1, Math.floor(numEnv('KILLCORD_SEMANTIC_WINDOW',  5)));
+const SEMANTIC_REPEATS      = Math.max(1, Math.floor(numEnv('KILLCORD_SEMANTIC_REPEATS', 3)));
+const SEMANTIC_INCLUDE_ARGS = process.env.KILLCORD_SEMANTIC_INCLUDE_ARGS === 'true';
 
 // ── Header parsing ─────────────────────────────────────────────────────────
 
@@ -129,9 +174,201 @@ export function scanHistoryForLoop(
   for (const [name, count] of toolCounts) {
     if (count > limit) {
       return {
-        tripped: true,
-        reason:  'tool_loop',
-        detail:  `Tool "${name}" appears ${count}× in conversation history (limit: ${limit} per ${WINDOW_MS / 1000}s window)`,
+        tripped:   true,
+        reason:    'tool_loop',
+        mechanism: 'exact',
+        detail:    `Tool "${name}" appears ${count}× in conversation history (limit: ${limit} per ${WINDOW_MS / 1000}s window)`,
+      };
+    }
+  }
+
+  return { tripped: false };
+}
+
+// ── Semantic conversation-history scan ──────────────────────────────────────
+// Embeds each tool call and trips when a call is near-identical (cosine >
+// threshold) to several recent calls. Catches loops that exact-match misses
+// because the agent rephrases its arguments slightly each turn.
+//
+// Fails open: if semantic detection is disabled, the embedder isn't ready, or
+// embedding throws, this returns { tripped: false } and the request proceeds
+// on exact-match alone. A request must never fail because semantic detection
+// had a problem.
+
+interface OrderedCall { name: string; input: unknown; }
+
+/** Pull tool calls out of assistant turns, in order. Handles Anthropic
+ *  (content[].type==='tool_use') and OpenAI (message.tool_calls[]). */
+function extractOrderedCalls(messages: Array<Record<string, unknown>>): OrderedCall[] {
+  const calls: OrderedCall[] = [];
+  for (const msg of messages) {
+    if (msg['role'] !== 'assistant') continue;
+
+    const content = msg['content'];
+    if (Array.isArray(content)) {
+      for (const block of content as Array<{ type?: string; name?: string; input?: unknown }>) {
+        if (block.type === 'tool_use' && block.name) {
+          calls.push({ name: block.name, input: block.input ?? {} });
+        }
+      }
+    }
+
+    const toolCalls = msg['tool_calls'];
+    if (Array.isArray(toolCalls)) {
+      for (const tc of toolCalls as Array<{ function?: { name?: string; arguments?: string } }>) {
+        const name = tc.function?.name;
+        if (!name) continue;
+        let input: unknown = tc.function?.arguments ?? '';
+        if (typeof input === 'string') {
+          try { input = JSON.parse(input); } catch { /* keep raw string */ }
+        }
+        calls.push({ name, input });
+      }
+    }
+  }
+  return calls;
+}
+
+// A string value counts as natural-language content if it contains whitespace
+// and is reasonably long, or is long on its own. This excludes IDs, enums,
+// numbers, page cursors, and short tokens — the args that legitimately vary
+// during pagination and batch lookups.
+function isNaturalLanguage(v: unknown): v is string {
+  return typeof v === 'string' && ((/\s/.test(v) && v.length >= 8) || v.length >= 25);
+}
+
+function extractNaturalLanguage(input: unknown): string {
+  const parts: string[] = [];
+  const walk = (v: unknown): void => {
+    if (isNaturalLanguage(v)) parts.push(v);
+    else if (v && typeof v === 'object') {
+      for (const val of Object.values(v as Record<string, unknown>)) walk(val);
+    }
+  };
+  walk(input);
+  return parts.join(' ');
+}
+
+/** The string embedded for a call, or null if the call has no comparable
+ *  semantic content (and therefore cannot form a semantic loop). */
+function embedStringForCall(c: OrderedCall): string | null {
+  if (SEMANTIC_INCLUDE_ARGS) return `${c.name}:${JSON.stringify(c.input)}`;
+  const nl = extractNaturalLanguage(c.input);
+  return nl ? `${c.name}: ${nl}` : null;
+}
+
+// ── LRU embedding cache (by string hash) ────────────────────────────────────
+
+const EMBED_CACHE_MAX = 512;
+const _embedCache = new Map<string, Float32Array>();
+
+function cacheKey(s: string): string {
+  return createHash('sha256').update(s).digest('hex').slice(0, 16);
+}
+
+function cacheGet(key: string): Float32Array | undefined {
+  const v = _embedCache.get(key);
+  if (v !== undefined) { _embedCache.delete(key); _embedCache.set(key, v); } // refresh LRU
+  return v;
+}
+
+function cacheSet(key: string, val: Float32Array): void {
+  if (_embedCache.has(key)) _embedCache.delete(key);
+  _embedCache.set(key, val);
+  while (_embedCache.size > EMBED_CACHE_MAX) {
+    const oldest = _embedCache.keys().next().value as string;
+    _embedCache.delete(oldest);
+  }
+}
+
+async function embedAllCached(strings: Array<string | null>): Promise<Array<Float32Array | null>> {
+  const embedder = await getEmbedder();
+  const out: Array<Float32Array | null> = new Array(strings.length).fill(null);
+  for (let i = 0; i < strings.length; i++) {
+    const s = strings[i];
+    if (s === null) continue;
+    const key = cacheKey(s);
+    const cached = cacheGet(key);
+    if (cached) { out[i] = cached; continue; }
+    const res = await embedder(s.slice(0, 512), { pooling: 'mean', normalize: true });
+    cacheSet(key, res.data);
+    out[i] = res.data;
+  }
+  return out;
+}
+
+// ── log-once helper ──────────────────────────────────────────────────────────
+
+const _loggedOnce = new Set<string>();
+function logOnce(key: string, msg: string): void {
+  if (_loggedOnce.has(key)) return;
+  _loggedOnce.add(key);
+  console.warn(msg);
+}
+
+/**
+ * Semantic loop scan. Async because it embeds call history. Never throws.
+ */
+export async function scanHistoryForSemanticLoop(
+  messages: Array<Record<string, unknown>>,
+): Promise<CircuitBreakerResult> {
+  if (!SEMANTIC_ENABLED) return { tripped: false };
+
+  // Fail open on a cold model — never block a request on a ~90 MB download.
+  if (!isEmbedderReady()) {
+    logOnce('sem_not_ready',
+      '[killcord/cb] Semantic loop detection skipped — embedder not ready yet (using exact-match only).');
+    return { tripped: false };
+  }
+
+  const calls = extractOrderedCalls(messages);
+  if (calls.length <= SEMANTIC_REPEATS) return { tripped: false };
+
+  const strings      = calls.map(embedStringForCall);
+  const comparable   = strings.map((s, i) => (s !== null ? i : -1)).filter(i => i >= 0);
+  if (comparable.length <= SEMANTIC_REPEATS) return { tripped: false };
+
+  let vectors: Array<Float32Array | null>;
+  try {
+    vectors = await embedAllCached(strings);
+  } catch (err) {
+    logOnce('sem_embed_err',
+      `[killcord/cb] Semantic embedding error — falling back to exact-match: ${err instanceof Error ? err.message : String(err)}`);
+    return { tripped: false };
+  }
+
+  // Slide over comparable calls; count near-duplicates among the prior window.
+  for (let p = SEMANTIC_REPEATS; p < comparable.length; p++) {
+    const i  = comparable[p];
+    const vi = vectors[i];
+    if (!vi) continue;
+
+    const start = Math.max(0, p - SEMANTIC_WINDOW);
+    let matches = 0, best = 0, bestIdx = -1;
+
+    for (let q = start; q < p; q++) {
+      const j  = comparable[q];
+      const vj = vectors[j];
+      if (!vj) continue;
+      const score = cosine(vi, vj);
+      if (score > SEMANTIC_THRESHOLD) {
+        matches++;
+        if (score > best) { best = score; bestIdx = j; }
+      }
+    }
+
+    if (matches >= SEMANTIC_REPEATS) {
+      return {
+        tripped:    true,
+        reason:     'semantic_loop',
+        mechanism:  'semantic',
+        similarity: best,
+        detail:
+          `Tool call #${i + 1} ("${calls[i].name}") is ${(best * 100).toFixed(1)}% ` +
+          `semantically similar to ${matches} of the previous ${p - start} call(s) — ` +
+          `e.g. call #${bestIdx + 1} ("${calls[bestIdx].name}"). The agent appears stuck ` +
+          `repeating the same action with cosmetic changes ` +
+          `(threshold ${SEMANTIC_THRESHOLD}, window ${SEMANTIC_WINDOW}, repeats ${SEMANTIC_REPEATS}).`,
       };
     }
   }

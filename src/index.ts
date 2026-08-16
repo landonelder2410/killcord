@@ -495,7 +495,14 @@ function runSingleProcess(): void {
 
 // ── Entry point ────────────────────────────────────────────────────────────
 
-if (cluster.isPrimary) {
+// Subcommand dispatch: `killcord replay [traceId]` opens the trace viewer
+// instead of starting the proxy. Only the primary process handles this.
+if (cluster.isPrimary && process.argv[2] === 'replay') {
+  // Lazy import so the ONNX/express proxy stack isn't loaded for the CLI path.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { runReplay } = require('./replay-cli') as typeof import('./replay-cli');
+  runReplay(process.argv[3]);
+} else if (cluster.isPrimary) {
   if (NUM_WORKERS <= 1) {
     runSingleProcess();
   } else {
