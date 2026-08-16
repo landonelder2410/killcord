@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Aether Proxy — agent integration smoke test
+ * Killcord — agent integration smoke test
  *
  * Exercises every live endpoint on the Railway deployment:
  *   1. GET  /health          — admin-authenticated health check
@@ -12,18 +12,18 @@
  *
  * The proxy endpoints (#5, #6) are sent without a real upstream API key so
  * the upstream returns 401, but the proxy itself must handle the request
- * cleanly and return the X-Aether-Trace-Id header — that's what we assert.
+ * cleanly and return the X-Killcord-Trace-Id header — that's what we assert.
  *
  * Memory check: the tool-filtering payload ships 10 MCP tool schemas so the
  * proxy must load the MiniLM embedder, embed all descriptions, and pick top-2
  * without OOM on the Railway container.
  */
 
-const BASE   = process.env.AETHER_BASE_URL ?? 'https://aether-proxy-production.up.railway.app';
-const ADMIN  = process.env.ADMIN_API_KEY ?? process.env.AETHER_ADMIN_KEY ?? '';
+const BASE   = process.env.KILLCORD_BASE_URL ?? 'https://killcord-production.up.railway.app';
+const ADMIN  = process.env.ADMIN_API_KEY ?? '';
 
 if (!ADMIN) {
-  console.error('Set ADMIN_API_KEY (or AETHER_ADMIN_KEY) before running this script.');
+  console.error('Set ADMIN_API_KEY before running this script.');
   process.exit(1);
 }
 
@@ -63,7 +63,7 @@ async function post(path, body, extraHeaders = {}) {
   const text = await res.text();
   let json = null;
   try { json = JSON.parse(text); } catch { /* streaming or non-JSON */ }
-  return { res, status: res.status, json, traceId: res.headers.get('x-aether-trace-id') };
+  return { res, status: res.status, json, traceId: res.headers.get('x-killcord-trace-id') };
 }
 
 // ── 10 MCP tool schemas (memory / semantic-filter stress test) ───────────────
@@ -88,7 +88,7 @@ const TOOLS_OPENAI = TOOLS_ANTHROPIC.map(t => ({
 // ── Test runner ───────────────────────────────────────────────────────────────
 
 async function run() {
-  console.log(`\n${BOLD}Aether Proxy — Agent Integration Smoke Test${RESET}`);
+  console.log(`\n${BOLD}Killcord — Agent Integration Smoke Test${RESET}`);
   console.log(`${DIM}Target: ${BASE}${RESET}\n`);
 
   // ── 1. Health ───────────────────────────────────────────────────────────────
@@ -117,7 +117,7 @@ async function run() {
   try {
     const res = await fetch(`${BASE}/metrics`, { headers: { 'x-admin-api-key': ADMIN } });
     const text = await res.text();
-    if (res.status === 200 && text.includes('aether_requests_proxied_total')) {
+    if (res.status === 200 && text.includes('kc_requests_proxied_total')) {
       ok(`GET /metrics → 200`, 'Prometheus counters present');
     } else {
       fail(`GET /metrics → ${res.status}`);
@@ -156,9 +156,9 @@ async function run() {
 
     // Upstream returns 401 (bad key) — the proxy itself must have processed it
     if (traceId) {
-      ok(`X-Aether-Trace-Id present`, traceId.slice(0, 8) + '…');
+      ok(`X-Killcord-Trace-Id present`, traceId.slice(0, 8) + '…');
     } else {
-      fail('X-Aether-Trace-Id missing — proxy may have crashed');
+      fail('X-Killcord-Trace-Id missing — proxy may have crashed');
     }
 
     if (status === 401 || status === 200) {
@@ -189,9 +189,9 @@ async function run() {
     const ms = Date.now() - start;
 
     if (traceId) {
-      ok(`X-Aether-Trace-Id present`, traceId.slice(0, 8) + '…');
+      ok(`X-Killcord-Trace-Id present`, traceId.slice(0, 8) + '…');
     } else {
-      fail('X-Aether-Trace-Id missing — proxy may have crashed');
+      fail('X-Killcord-Trace-Id missing — proxy may have crashed');
     }
 
     if (status === 401 || status === 200) {

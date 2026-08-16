@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * Aether Proxy — Rogue Agent Loop Breaker Test
+ * Killcord — Rogue Agent Loop Breaker Test
  *
  * Scenarios:
  *  1. Instant history-scan trip    — single request with 7 tool_use blocks
  *  2. Growing agent loop           — history grows by 1 tool_use per request
  *  3. Request-flood trip           — rapid requests exceed CB_REQUEST_LIMIT
- *  4. Complexity header            — X-Aether-Complexity emitted correctly
+ *  4. Complexity header            — X-Killcord-Complexity emitted correctly
  *
  * Usage (recommended — self-managed, no external proxy needed):
  *   npm run test:proxy
@@ -78,7 +78,7 @@ async function startProxy() {
       ...process.env,
       PORT:                        String(PROXY_PORT),
       WORKERS:                     '1',
-      AETHER_REQUIRE_LICENSE_KEY:  'false',
+      KILLCORD_REQUIRE_LICENSE_KEY:  'false',
       ADMIN_API_KEY:               '',
       CB_REQUEST_LIMIT:            String(CB_LIMIT),
       CB_TOOL_REPEAT_LIMIT:        '5',
@@ -144,7 +144,7 @@ function buildAnthropicLoop(toolName, toolCallCount) {
 
 // ── Setup ─────────────────────────────────────────────────────────────────────
 
-console.log(`\n── Aether Circuit Breaker Test${MANAGED ? ' [managed mode]' : ''} ──`);
+console.log(`\n── Killcord Circuit Breaker Test${MANAGED ? ' [managed mode]' : ''} ──`);
 console.log(`Proxy: ${BASE}  CB_REQUEST_LIMIT: ${CB_LIMIT}\n`);
 
 if (MANAGED) {
@@ -161,7 +161,7 @@ if (MANAGED) {
     console.log(`✅ Proxy is up\n`);
   } catch (err) {
     console.error(`❌ Cannot reach proxy at ${BASE}: ${err.message}`);
-    console.error('Start with: WORKERS=1 AETHER_REQUIRE_LICENSE_KEY=false npm run dev');
+    console.error('Start with: WORKERS=1 KILLCORD_REQUIRE_LICENSE_KEY=false npm run dev');
     console.error('Or use: node scripts/test-loop-breaker.mjs --managed');
     process.exit(1);
   }
@@ -197,7 +197,7 @@ for (let calls = 1; calls <= 8; calls++) {
     model:      'claude-3-5-sonnet-20241022',
     messages:   buildAnthropicLoop('database_query', calls),
     max_tokens: 1024,
-  }, { 'x-aether-session-id': loopSession });
+  }, { 'x-killcord-session-id': loopSession });
 
   const tripped = r.status === 429 && r.body?.error === 'circuit_breaker_tripped';
   process.stdout.write(tripped ? '🔴' : '🟢');
@@ -224,7 +224,7 @@ let floodTrips = 0, firstFloodTrip = null;
 
 for (let i = 1; i <= FLOOD_SEND; i++) {
   const r = await post('/v1/chat/completions', simpleBody, {
-    'x-aether-session-id': floodSession,
+    'x-killcord-session-id': floodSession,
   });
   const tripped = r.status === 429 && r.body?.error === 'circuit_breaker_tripped';
   process.stdout.write(tripped ? '🔴' : '🟢');
@@ -254,20 +254,20 @@ console.log('Scenario 4 — Complexity header emitted on non-CB requests');
 const [complexReq, simpleReq] = await Promise.all([
   post('/v1/chat/completions',
     { model: 'gpt-4o', messages: [{ role: 'user', content: 'analyze and synthesize the quarterly financial reports to evaluate performance' }] },
-    { 'x-aether-session-id': `cplx-a-${Date.now()}` }),
+    { 'x-killcord-session-id': `cplx-a-${Date.now()}` }),
   post('/v1/chat/completions',
     { model: 'gpt-4o', messages: [{ role: 'user', content: 'what is 2 + 2' }] },
-    { 'x-aether-session-id': `cplx-b-${Date.now()}` }),
+    { 'x-killcord-session-id': `cplx-b-${Date.now()}` }),
 ]);
 
-const complexHeader = complexReq.headers.get('x-aether-complexity');
-const simpleHeader  = simpleReq.headers.get('x-aether-complexity');
+const complexHeader = complexReq.headers.get('x-killcord-complexity');
+const simpleHeader  = simpleReq.headers.get('x-killcord-complexity');
 
 ok('S4: complex prompt → "complex"', complexHeader === 'complex', complexHeader ?? '(not set)');
 ok('S4: simple prompt → "simple"',   simpleHeader  === 'simple',  simpleHeader  ?? '(not set)');
 
-console.log(`  Complex: ${complexHeader} (score ${complexReq.headers.get('x-aether-complexity-score')})`);
-console.log(`  Simple:  ${simpleHeader}  (score ${simpleReq.headers.get('x-aether-complexity-score')})`);
+console.log(`  Complex: ${complexHeader} (score ${complexReq.headers.get('x-killcord-complexity-score')})`);
+console.log(`  Simple:  ${simpleHeader}  (score ${simpleReq.headers.get('x-killcord-complexity-score')})`);
 
 // ── Teardown + summary ────────────────────────────────────────────────────────
 

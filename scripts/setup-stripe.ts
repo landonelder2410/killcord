@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Provision the Aether Proxy product and three-tier pricing in Stripe.
+ * Provision the Killcord product and three-tier pricing in Stripe.
  *
  * Usage (run from the project root):
  *   npx tsx scripts/setup-stripe.ts
@@ -9,7 +9,7 @@
  * Must be sk_live_... — this script targets your production account.
  *
  * On success:
- *   • Creates (or reuses) the "Aether Proxy" product
+ *   • Creates (or reuses) the "Killcord" product
  *   • Creates three monthly recurring prices: Developer / Growth / Scale
  *   • Writes STRIPE_PRICE_ID_DEVELOPER / _GROWTH / _SCALE into .env
  *   • Prints all three IDs in bold for copy-paste into Vercel
@@ -48,7 +48,7 @@ if (!secretKey.startsWith('sk_live_')) {
 const stripe = new Stripe(secretKey);
 
 // ── Tier definitions ───────────────────────────────────────────────────────
-const PRODUCT_NAME = 'Aether Proxy';
+const PRODUCT_NAME = 'Killcord';
 
 const TIERS = [
   { label: 'Developer', envKey: 'STRIPE_PRICE_ID_DEVELOPER', unitAmount:  4900 },
@@ -73,7 +73,7 @@ function upsertEnvLine(content: string, key: string, value: string): string {
 // ── Main ───────────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
-  console.log(`\n${bold('Provisioning Aether Proxy in Stripe LIVE mode...')}\n`);
+  console.log(`\n${bold('Provisioning Killcord in Stripe LIVE mode...')}\n`);
 
   // ── Product ──────────────────────────────────────────────────────────────
   let product: Stripe.Product;

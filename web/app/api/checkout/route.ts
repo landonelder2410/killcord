@@ -53,14 +53,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         {
           message:
             `The "${addonKey}" add-on isn't live yet — ` +
-            'email landon@bankdrift.com to be notified on launch.',
+            'email support@killcord.dev to be notified on launch.',
         },
         { status: 503 },
       );
     }
 
     const isOneTime  = ADDON_ONE_TIME.has(addonKey);
-    const licenseKey = `aether_${randomBytes(32).toString('hex')}`;
+    const licenseKey = `kc_${randomBytes(32).toString('hex')}`;
 
     try {
       const session = await getStripe().checkout.sessions.create({
@@ -71,13 +71,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         cancel_url:                 cancelUrl,
         allow_promotion_codes:      true,
         billing_address_collection: 'required',
-        metadata: { source: 'aether-proxy', addon: addonKey, licenseKey },
+        metadata: { source: 'killcord', addon: addonKey, licenseKey },
       });
 
       return NextResponse.json({ url: session.url }, { status: 201 });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      console.error('[aether] Stripe addon checkout error:', message);
+      console.error('[killcord] Stripe addon checkout error:', message);
       return NextResponse.json({ message }, { status: 502 });
     }
   }
@@ -93,7 +93,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const licenseKey = `aether_${randomBytes(32).toString('hex')}`;
+  const licenseKey = `kc_${randomBytes(32).toString('hex')}`;
 
   try {
     const session = await getStripe().checkout.sessions.create({
@@ -105,13 +105,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       allow_promotion_codes:      true,
       billing_address_collection: 'required',
       tax_id_collection:          { enabled: true },
-      metadata: { source: 'aether-proxy', tier, licenseKey },
+      metadata: { source: 'killcord', tier, licenseKey },
     });
 
     return NextResponse.json({ url: session.url }, { status: 201 });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error('[aether] Stripe checkout error:', message);
+    console.error('[killcord] Stripe checkout error:', message);
     return NextResponse.json({ message }, { status: 502 });
   }
 }

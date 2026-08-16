@@ -289,7 +289,7 @@ export function AgentReplayViewer() {
           </h2>
           <p className="section-sub">
             Every prompt, tool call, and token logged. Loop warnings surface before
-            they become runaway API bills — intercepted directly inside Aether Proxy.
+            they become runaway API bills — intercepted directly inside Killcord.
           </p>
         </div>
 
@@ -389,7 +389,7 @@ export function AgentReplayViewer() {
           <div className="ar-statusbar">
             <span className="ar-status-dot" aria-hidden="true" />
             <span className="ar-status-text">
-              Aether Proxy · {summary.total_steps} steps intercepted · {visible.length} shown
+              Killcord · {summary.total_steps} steps intercepted · {visible.length} shown
             </span>
             {summary.loop_warnings > 0 && (
               <span className="ar-loop-badge" role="alert">

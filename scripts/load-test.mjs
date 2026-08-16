@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Aether Proxy — autocannon load test
+ * Killcord — autocannon load test
  *
  * Fires 50 concurrent connections for 10 seconds at /v1/chat/completions
  * and reports avg req/sec, p99 latency, 2xx count, and 429 count.
@@ -52,7 +52,7 @@ const PAYLOAD = JSON.stringify({
   ],
 });
 
-console.log(`\nAether Proxy load test`);
+console.log(`\nKillcord load test`);
 console.log(`  target      : ${HOST}/v1/chat/completions`);
 console.log(`  connections : 50`);
 console.log(`  duration    : 10s`);
@@ -65,7 +65,7 @@ const instance = autocannon({
   method:      'POST',
   headers: {
     'content-type':        'application/json',
-    'x-aether-session-id': `load-test-${Date.now()}`,
+    'x-killcord-session-id': `load-test-${Date.now()}`,
   },
   body: PAYLOAD,
 }, (err, result) => {

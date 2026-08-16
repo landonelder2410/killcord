@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, writeFile } from 'node:fs';
 import { join }                                    from 'node:path';
 
-const STATE_FILE = join(process.cwd(), '.aether-state.json');
+const STATE_FILE = join(process.cwd(), '.killcord-state.json');
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -94,7 +94,7 @@ export function flushState(path = STATE_FILE): void {
   try {
     writeFileSync(path, JSON.stringify(buildPayload(), null, 2));
   } catch (err) {
-    console.error('[aether] State flush failed:', err);
+    console.error('[killcord] State flush failed:', err);
   }
 }
 
@@ -102,7 +102,7 @@ export function flushState(path = STATE_FILE): void {
 export function flushStateAsync(path = STATE_FILE): Promise<void> {
   return new Promise(resolve => {
     writeFile(path, JSON.stringify(buildPayload(), null, 2), err => {
-      if (err) console.error('[aether] Async state flush failed:', err);
+      if (err) console.error('[killcord] Async state flush failed:', err);
       resolve();
     });
   });

@@ -100,7 +100,7 @@ export function createWebhookHandler() {
       event = getStripe().webhooks.constructEvent(req.body as Buffer, sig, webhookSecret);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.warn('[aether] Stripe webhook signature verification failed:', msg);
+      console.warn('[killcord] Stripe webhook signature verification failed:', msg);
       res.status(400).json({ error: 'invalid_signature', message: msg });
       return;
     }
@@ -113,7 +113,7 @@ export function createWebhookHandler() {
           const key     = session.metadata?.licenseKey;
 
           if (!key) {
-            console.warn('[aether] checkout.session.completed with no licenseKey in metadata', session.id);
+            console.warn('[killcord] checkout.session.completed with no licenseKey in metadata', session.id);
             break;
           }
 
@@ -134,7 +134,7 @@ export function createWebhookHandler() {
           }
 
           broadcastLicenseUpdate();
-          console.log(`[aether] License activated via webhook: ${key.slice(0, 16)}… tier=${session.metadata?.tier ?? '?'}`);
+          console.log(`[killcord] License activated via webhook: ${key.slice(0, 16)}… tier=${session.metadata?.tier ?? '?'}`);
           break;
         }
 
@@ -145,7 +145,7 @@ export function createWebhookHandler() {
           if (key) {
             setLicenseStatus(key, 'revoked');
             broadcastLicenseUpdate();
-            console.log(`[aether] License revoked (subscription deleted): ${key.slice(0, 16)}…`);
+            console.log(`[killcord] License revoked (subscription deleted): ${key.slice(0, 16)}…`);
           }
           break;
         }
@@ -158,7 +158,7 @@ export function createWebhookHandler() {
             if (key) {
               setLicenseStatus(key, 'revoked');
               broadcastLicenseUpdate();
-              console.log(`[aether] License revoked (subscription ${sub.status}): ${key.slice(0, 16)}…`);
+              console.log(`[killcord] License revoked (subscription ${sub.status}): ${key.slice(0, 16)}…`);
             }
           }
           break;
@@ -169,7 +169,7 @@ export function createWebhookHandler() {
           break;
       }
     } catch (err) {
-      console.error('[aether] Webhook handler error:', err instanceof Error ? err.message : err);
+      console.error('[killcord] Webhook handler error:', err instanceof Error ? err.message : err);
       res.status(500).json({ error: 'webhook_handler_error' });
       return;
     }
@@ -253,19 +253,19 @@ export function billingRouter(): Router {
         billing_address_collection: 'required',
         tax_id_collection:          { enabled: true },
         metadata: {
-          source:     'aether-proxy',
+          source:     'killcord',
           tier:       body.tier ?? '',
           licenseKey,
         },
       });
 
-      console.log(`[aether] Checkout session created: ${session.id} tier=${body.tier ?? '?'} key=${licenseKey.slice(0, 16)}…`);
+      console.log(`[killcord] Checkout session created: ${session.id} tier=${body.tier ?? '?'} key=${licenseKey.slice(0, 16)}…`);
 
       res.status(201).json({ url: session.url });
 
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      console.error('[aether] Stripe checkout error:', message);
+      console.error('[killcord] Stripe checkout error:', message);
       res.status(502).json({ error: 'stripe_error', message });
     }
   });
@@ -305,7 +305,7 @@ export function billingRouter(): Router {
       if (!licenseKey) {
         res.status(404).json({
           error:   'key_not_found',
-          message: 'No license key found for this session. Contact support at landon@bankdrift.com',
+          message: 'No license key found for this session. Contact support at support@killcord.dev',
         });
         return;
       }
@@ -323,7 +323,7 @@ export function billingRouter(): Router {
           trialEnd:   null,
         });
         broadcastLicenseUpdate();
-        console.log(`[aether] License activated via /key endpoint: ${licenseKey.slice(0, 16)}… tier=${session.metadata?.tier ?? '?'}`);
+        console.log(`[killcord] License activated via /key endpoint: ${licenseKey.slice(0, 16)}… tier=${session.metadata?.tier ?? '?'}`);
       }
 
       res.json({
@@ -334,7 +334,7 @@ export function billingRouter(): Router {
 
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      console.error('[aether] /key lookup error:', message);
+      console.error('[killcord] /key lookup error:', message);
       res.status(502).json({ error: 'stripe_error', message });
     }
   });

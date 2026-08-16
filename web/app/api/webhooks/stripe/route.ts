@@ -27,7 +27,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     event = getStripe().webhooks.constructEvent(rawBody, sig, webhookSecret);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.warn('[aether] Stripe signature verification failed:', msg);
+    console.warn('[killcord] Stripe signature verification failed:', msg);
     return NextResponse.json({ error: 'invalid_signature', message: msg }, { status: 400 });
   }
 
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     case 'checkout.session.completed': {
       const session = event.data.object as Stripe.Checkout.Session;
       console.log(
-        `[aether] checkout.session.completed: ${session.id} ` +
+        `[killcord] checkout.session.completed: ${session.id} ` +
         `tier=${session.metadata?.tier ?? '?'} ` +
         `key=${(session.metadata?.licenseKey ?? '').slice(0, 16)}…`,
       );
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       const sub  = event.data.object as Stripe.Subscription;
       const meta = sub.metadata as Record<string, string> | undefined;
       if (meta?.licenseKey) {
-        console.log(`[aether] Subscription ${event.type}: key=${meta.licenseKey.slice(0, 16)}… status=${sub.status}`);
+        console.log(`[killcord] Subscription ${event.type}: key=${meta.licenseKey.slice(0, 16)}… status=${sub.status}`);
       }
       break;
     }

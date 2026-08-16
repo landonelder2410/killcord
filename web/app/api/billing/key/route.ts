@@ -30,7 +30,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const licenseKey = session.metadata?.licenseKey;
     if (!licenseKey) {
       return NextResponse.json(
-        { error: 'key_not_found', message: 'No license key for this session. Contact landon@bankdrift.com.' },
+        { error: 'key_not_found', message: 'No license key for this session. Contact support@killcord.dev.' },
         { status: 404 },
       );
     }
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error('[aether] /api/billing/key error:', message);
+    console.error('[killcord] /api/billing/key error:', message);
     return NextResponse.json({ error: 'stripe_error', message }, { status: 502 });
   }
 }

@@ -48,9 +48,9 @@ let _embedderPromise: Promise<EmbedPipeline> | null = null;
 function getEmbedder(): Promise<EmbedPipeline> {
   if (!_embedderPromise) {
     _embedderPromise = (async () => {
-      console.log('[aether] Loading embedding model (first run downloads ~90 MB to cache)...');
+      console.log('[killcord] Loading embedding model (first run downloads ~90 MB to cache)...');
       const model = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
-      console.log('[aether] Embedding model ready.');
+      console.log('[killcord] Embedding model ready.');
       return model as EmbedPipeline;
     })();
   }
@@ -94,7 +94,7 @@ export async function filterTools(
   const top = scored.slice(0, topK).map(s => s.tool);
 
   console.log(
-    `[aether] Filtered ${allTools.length} → ${topK} tools (-${allTools.length - topK}): [${top.map(t => t.name).join(', ')}]`,
+    `[killcord] Filtered ${allTools.length} → ${topK} tools (-${allTools.length - topK}): [${top.map(t => t.name).join(', ')}]`,
   );
   return top;
 }
@@ -115,7 +115,7 @@ function fireWebhook(payload: Record<string, unknown>): void {
     body:    JSON.stringify(payload),
     signal:  AbortSignal.timeout(5_000),
   }).catch(err => {
-    console.warn('[aether] Webhook delivery failed:', err instanceof Error ? err.message : err);
+    console.warn('[killcord] Webhook delivery failed:', err instanceof Error ? err.message : err);
   });
 }
 
@@ -171,7 +171,7 @@ const HOP_BY_HOP = new Set([
 // Requests for these model names bypass cloud APIs entirely and are forwarded
 // to the local inference engine. Semantic filtering is skipped — no per-token
 // cloud billing means there is nothing to optimise.
-const LOCAL_MODELS     = new Set(['local-aether', 'llama-cpp']);
+const LOCAL_MODELS     = new Set(['local-killcord', 'llama-cpp']);
 const LOCAL_ENGINE_URL = process.env.LOCAL_ENGINE_URL ?? 'http://127.0.0.1:8081';
 
 // ── Retry constants ────────────────────────────────────────────────────────
@@ -203,7 +203,7 @@ async function proxyRequest(
     if (attempt > 0) {
       const delay = BASE_DELAY_MS * (2 ** (attempt - 1)); // 1 s, then 2 s
       console.warn(
-        `[aether] Retrying upstream (attempt ${attempt}/${MAX_RETRIES}, wait ${delay} ms): ${targetUrl}`,
+        `[killcord] Retrying upstream (attempt ${attempt}/${MAX_RETRIES}, wait ${delay} ms): ${targetUrl}`,
       );
       await sleep(delay);
     }
@@ -262,7 +262,7 @@ export function anthropicFilterMiddleware(upstreamBase: string) {
     // Generated once per request. Injected into the response header so
     // enterprise engineers can correlate proxy logs with upstream API traces.
     const traceId = randomUUID();
-    res.setHeader('X-Aether-Trace-Id', traceId);
+    res.setHeader('X-Killcord-Trace-Id', traceId);
 
     const body = req.body as AnthropicRequest;
 
@@ -291,7 +291,7 @@ export function anthropicFilterMiddleware(upstreamBase: string) {
       );
       if (historyResult.tripped) {
         const sessionKey = resolveSessionKey(req.headers as Record<string, string | string[] | undefined>, req.ip ?? 'unknown');
-        console.warn(`[aether/cb] History loop detected. session=${sessionKey} traceId=${traceId} reason=${historyResult.reason} detail=${historyResult.detail}`);
+        console.warn(`[killcord/cb] History loop detected. session=${sessionKey} traceId=${traceId} reason=${historyResult.reason} detail=${historyResult.detail}`);
         fireWebhook({ event: 'circuit_breaker_tripped', traceId, sessionKey, ...historyResult, endpoint: '/v1/messages', ts: new Date().toISOString() });
         res.status(429).json({
           error:       'circuit_breaker_tripped',
@@ -306,7 +306,7 @@ export function anthropicFilterMiddleware(upstreamBase: string) {
       const sessionKey = resolveSessionKey(req.headers as Record<string, string | string[] | undefined>, req.ip ?? 'unknown');
       const crossResult = await checkCrossRequestLimits(sessionKey, tokensReceived, cbOptions);
       if (crossResult.tripped) {
-        console.warn(`[aether/cb] Cross-request limit hit. session=${sessionKey} traceId=${traceId} reason=${crossResult.reason} detail=${crossResult.detail}`);
+        console.warn(`[killcord/cb] Cross-request limit hit. session=${sessionKey} traceId=${traceId} reason=${crossResult.reason} detail=${crossResult.detail}`);
         fireWebhook({ event: 'circuit_breaker_tripped', traceId, sessionKey, ...crossResult, endpoint: '/v1/messages', ts: new Date().toISOString() });
         res.status(429).json({
           error:       'circuit_breaker_tripped',
@@ -320,8 +320,8 @@ export function anthropicFilterMiddleware(upstreamBase: string) {
       // ── COMPLEXITY CLASSIFICATION ────────────────────────────────────────
       const lastUserMsg = extractAnthropicPrompt(body.messages);
       const complexity  = classifyRequest(lastUserMsg, toolsReceived, body.messages.length);
-      res.setHeader('X-Aether-Complexity', complexity.complexity);
-      res.setHeader('X-Aether-Complexity-Score', String(complexity.score));
+      res.setHeader('X-Killcord-Complexity', complexity.complexity);
+      res.setHeader('X-Killcord-Complexity-Score', String(complexity.score));
 
       // ── PII REDACTION ────────────────────────────────────────────────────
       // Mutate message text in-place before forwarding so credentials and
@@ -330,7 +330,7 @@ export function anthropicFilterMiddleware(upstreamBase: string) {
 
       // ── AUTO-ROUTE: simple requests → local engine ───────────────────────
       if (shouldAutoRoute(complexity.complexity) && !LOCAL_MODELS.has(body.model ?? '')) {
-        console.log(`[aether] Auto-routing simple request to local engine. session=${sessionKey} score=${complexity.score} reasons=${complexity.reasons.join(',')}`);
+        console.log(`[killcord] Auto-routing simple request to local engine. session=${sessionKey} score=${complexity.score} reasons=${complexity.reasons.join(',')}`);
         res.on('finish', () =>
           setImmediate(() =>
             record({ ts: Date.now(), traceId, model: `local-auto:${body.model ?? 'unknown'}`, toolsReceived, toolsForwarded: toolsReceived, tokensReceived, tokensForwarded: tokensReceived })
@@ -387,7 +387,7 @@ export function anthropicFilterMiddleware(upstreamBase: string) {
       // Any internal failure triggers an immediate bypass: restore original
       // tools and forward the raw request so the caller is never blocked.
       const errMsg = filterErr instanceof Error ? filterErr.message : String(filterErr);
-      console.warn('[aether] Circuit breaker triggered — bypassing filter.', errMsg);
+      console.warn('[killcord] Circuit breaker triggered — bypassing filter.', errMsg);
 
       // ── WEBHOOK ALERT ─────────────────────────────────────────────────────
       // Silently notify ops via WEBHOOK_URL if configured. The proxy does not
@@ -413,7 +413,7 @@ export function anthropicFilterMiddleware(upstreamBase: string) {
 export function openaiFilterMiddleware(upstreamBase: string) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const traceId = randomUUID();
-    res.setHeader('X-Aether-Trace-Id', traceId);
+    res.setHeader('X-Killcord-Trace-Id', traceId);
 
     const body = req.body as OpenAIRequest;
     const originalTools = Array.isArray(body.tools) ? [...body.tools] : body.tools;
@@ -435,7 +435,7 @@ export function openaiFilterMiddleware(upstreamBase: string) {
       );
       if (historyResult.tripped) {
         const sessionKey = resolveSessionKey(req.headers as Record<string, string | string[] | undefined>, req.ip ?? 'unknown');
-        console.warn(`[aether/cb] History loop detected. session=${sessionKey} traceId=${traceId} reason=${historyResult.reason} detail=${historyResult.detail}`);
+        console.warn(`[killcord/cb] History loop detected. session=${sessionKey} traceId=${traceId} reason=${historyResult.reason} detail=${historyResult.detail}`);
         fireWebhook({ event: 'circuit_breaker_tripped', traceId, sessionKey, ...historyResult, endpoint: '/v1/chat/completions', ts: new Date().toISOString() });
         res.status(429).json({
           error:       'circuit_breaker_tripped',
@@ -450,7 +450,7 @@ export function openaiFilterMiddleware(upstreamBase: string) {
       const sessionKey = resolveSessionKey(req.headers as Record<string, string | string[] | undefined>, req.ip ?? 'unknown');
       const crossResult = await checkCrossRequestLimits(sessionKey, tokensReceived, cbOptions);
       if (crossResult.tripped) {
-        console.warn(`[aether/cb] Cross-request limit hit. session=${sessionKey} traceId=${traceId} reason=${crossResult.reason} detail=${crossResult.detail}`);
+        console.warn(`[killcord/cb] Cross-request limit hit. session=${sessionKey} traceId=${traceId} reason=${crossResult.reason} detail=${crossResult.detail}`);
         fireWebhook({ event: 'circuit_breaker_tripped', traceId, sessionKey, ...crossResult, endpoint: '/v1/chat/completions', ts: new Date().toISOString() });
         res.status(429).json({
           error:       'circuit_breaker_tripped',
@@ -465,14 +465,14 @@ export function openaiFilterMiddleware(upstreamBase: string) {
       const userMsg    = [...body.messages].reverse().find(m => m.role === 'user');
       const prompt     = typeof userMsg?.content === 'string' ? userMsg.content : '';
       const complexity = classifyRequest(prompt, toolsReceived, body.messages.length);
-      res.setHeader('X-Aether-Complexity', complexity.complexity);
-      res.setHeader('X-Aether-Complexity-Score', String(complexity.score));
+      res.setHeader('X-Killcord-Complexity', complexity.complexity);
+      res.setHeader('X-Killcord-Complexity-Score', String(complexity.score));
 
       redactOpenAIMessages(body.messages);
 
       // ── AUTO-ROUTE: simple requests → local engine ───────────────────────
       if (shouldAutoRoute(complexity.complexity) && !LOCAL_MODELS.has(body.model ?? '')) {
-        console.log(`[aether] Auto-routing simple request to local engine. session=${sessionKey} score=${complexity.score}`);
+        console.log(`[killcord] Auto-routing simple request to local engine. session=${sessionKey} score=${complexity.score}`);
         res.on('finish', () =>
           setImmediate(() =>
             record({ ts: Date.now(), traceId, model: `local-auto:${body.model ?? 'unknown'}`, toolsReceived, toolsForwarded: toolsReceived, tokensReceived, tokensForwarded: tokensReceived })
@@ -528,7 +528,7 @@ export function openaiFilterMiddleware(upstreamBase: string) {
 
     } catch (filterErr) {
       const errMsg = filterErr instanceof Error ? filterErr.message : String(filterErr);
-      console.warn('[aether] Circuit breaker triggered — bypassing filter.', errMsg);
+      console.warn('[killcord] Circuit breaker triggered — bypassing filter.', errMsg);
 
       fireWebhook({
         event:    'circuit_breaker_triggered',

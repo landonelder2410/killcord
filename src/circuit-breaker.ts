@@ -6,8 +6,8 @@
  *  2. checkCrossRequestLimits  — Redis sliding-window; catches loops across requests
  *
  * Per-request overrides via request headers:
- *   x-aether-loop-limit    — integer: overrides CB_TOOL_REPEAT_LIMIT for this request
- *   x-aether-fail-strategy — 'fail-open' (default) | 'fail-closed':
+ *   x-killcord-loop-limit    — integer: overrides CB_TOOL_REPEAT_LIMIT for this request
+ *   x-killcord-fail-strategy — 'fail-open' (default) | 'fail-closed':
  *                            Controls behavior when Redis is unavailable.
  *                            fail-open  → log the error and allow the request through
  *                            fail-closed → log the error and deny the request
@@ -27,7 +27,7 @@ export interface CircuitBreakerResult {
   detail?:  string;
 }
 
-/** Per-request options parsed from x-aether-* headers. */
+/** Per-request options parsed from x-killcord-* headers. */
 export interface CBOptions {
   /** Override CB_TOOL_REPEAT_LIMIT for a single request. */
   loopLimit?:    number;
@@ -55,11 +55,11 @@ export function parseCBHeaders(
     return Array.isArray(v) ? v[0] : v;
   };
 
-  const rawLimit    = hdr('x-aether-loop-limit');
+  const rawLimit    = hdr('x-killcord-loop-limit');
   const parsedLimit = rawLimit ? parseInt(rawLimit, 10) : NaN;
   const loopLimit   = !isNaN(parsedLimit) && parsedLimit > 0 ? parsedLimit : undefined;
 
-  const rawStrategy = hdr('x-aether-fail-strategy');
+  const rawStrategy = hdr('x-killcord-fail-strategy');
   const failStrategy: CBOptions['failStrategy'] =
     rawStrategy === 'fail-closed' ? 'fail-closed' :
     rawStrategy === 'fail-open'   ? 'fail-open'   :
@@ -82,7 +82,7 @@ function getRedis(): Redis {
       connectTimeout:       2_000,
     });
     _redis.on('error', (err: Error) => {
-      console.warn('[aether/cb] Redis error (in-memory fallback active):', err.message);
+      console.warn('[killcord/cb] Redis error (in-memory fallback active):', err.message);
     });
   }
   return _redis;
@@ -202,7 +202,7 @@ async function redisCheck(sessionKey: string, tokens: number): Promise<CircuitBr
   ]);
 
   const reqCount = Number(await withTimeout(
-    redis.eval(COUNTER_LUA, 1, `aether:cb:req:${sessionKey}`, now, win),
+    redis.eval(COUNTER_LUA, 1, `killcord:cb:req:${sessionKey}`, now, win),
   ));
   if (reqCount > REQUEST_LIMIT) {
     return {
@@ -213,7 +213,7 @@ async function redisCheck(sessionKey: string, tokens: number): Promise<CircuitBr
   }
 
   const tokenTotal = Number(await withTimeout(
-    redis.eval(TOKEN_LUA, 1, `aether:cb:tok:${sessionKey}`, String(tokens), win),
+    redis.eval(TOKEN_LUA, 1, `killcord:cb:tok:${sessionKey}`, String(tokens), win),
   ));
   if (tokenTotal > TOKEN_LIMIT) {
     return {
@@ -235,7 +235,7 @@ async function redisCheck(sessionKey: string, tokens: number): Promise<CircuitBr
  * In-memory guarantees the CB works even when Redis is unavailable.
  * Redis adds cross-worker visibility in multi-worker mode.
  *
- * Fail-strategy (from x-aether-fail-strategy header, default 'fail-open'):
+ * Fail-strategy (from x-killcord-fail-strategy header, default 'fail-open'):
  *   fail-open   → Redis failure is logged; in-memory result stands
  *   fail-closed → Redis failure is logged and the request is denied
  */
@@ -275,7 +275,7 @@ export async function checkCrossRequestLimits(
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (failStrategy === 'fail-closed') {
-      console.warn(`[aether/cb] Redis unavailable; fail-closed → denying request. session=${sessionKey} err=${msg}`);
+      console.warn(`[killcord/cb] Redis unavailable; fail-closed → denying request. session=${sessionKey} err=${msg}`);
       recordCircuitBreakerTrip('burst_rate');
       return {
         tripped: true,
@@ -284,14 +284,14 @@ export async function checkCrossRequestLimits(
       };
     }
     // fail-open: log and allow through
-    console.warn(`[aether/cb] Redis unavailable; fail-open → allowing request. session=${sessionKey} err=${msg}`);
+    console.warn(`[killcord/cb] Redis unavailable; fail-open → allowing request. session=${sessionKey} err=${msg}`);
   }
 
   return { tripped: false };
 }
 
 /**
- * Extract a stable session key from the request. Prefers x-aether-session-id
+ * Extract a stable session key from the request. Prefers x-killcord-session-id
  * (set by the calling agent) and falls back to the client IP so stateless
  * callers are still tracked at the IP level.
  */
@@ -299,7 +299,7 @@ export function resolveSessionKey(
   headers: Record<string, string | string[] | undefined>,
   ip:      string,
 ): string {
-  const sid = headers['x-aether-session-id'];
+  const sid = headers['x-killcord-session-id'];
   const raw = Array.isArray(sid) ? sid[0] : sid;
   if (raw && raw.length <= 128) return `sid:${raw.replace(/[^a-zA-Z0-9-_]/g, '_')}`;
   return `ip:${ip}`;

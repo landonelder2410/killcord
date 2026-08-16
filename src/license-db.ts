@@ -22,14 +22,14 @@ export interface LicenseStore {
 
 // ── State ──────────────────────────────────────────────────────────────────
 
-const STATE_FILE = join(process.cwd(), '.aether-licenses.json');
+const STATE_FILE = join(process.cwd(), '.killcord-licenses.json');
 
 let store: LicenseStore = { byKey: {}, bySession: {} };
 
 // ── Key generation ─────────────────────────────────────────────────────────
 
 export function generateLicenseKey(): string {
-  return `aether_${randomBytes(32).toString('hex')}`;
+  return `kc_${randomBytes(32).toString('hex')}`;
 }
 
 // ── CRUD ───────────────────────────────────────────────────────────────────
@@ -77,7 +77,7 @@ export function loadLicenseState(): void {
     store.byKey     = parsed.byKey     ?? {};
     store.bySession = parsed.bySession ?? {};
     const count = Object.keys(store.byKey).length;
-    if (count > 0) console.log(`[aether] Loaded ${count} license record(s) from disk.`);
+    if (count > 0) console.log(`[killcord] Loaded ${count} license record(s) from disk.`);
   } catch {
     // File doesn't exist on first run — start fresh
   }
@@ -87,6 +87,6 @@ export function saveLicenseState(): void {
   try {
     writeFileSync(STATE_FILE, JSON.stringify(store, null, 2), 'utf8');
   } catch (err) {
-    console.error('[aether] Failed to save license state:', err);
+    console.error('[killcord] Failed to save license state:', err);
   }
 }

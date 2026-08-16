@@ -5,7 +5,7 @@
  * Complex requests → primary cloud LLM API (best reasoning quality)
  *
  * Routing is opt-in via AUTO_ROUTE=true env var. When disabled, complexity
- * is still computed and exposed as the X-Aether-Complexity response header
+ * is still computed and exposed as the X-Killcord-Complexity response header
  * so downstream observers can act on it.
  */
 import { recordComplexity } from './telemetry';

@@ -33,7 +33,7 @@ import { disconnectCbRedis }                   from './circuit-breaker';
 const PORT                  = parseInt(process.env.PORT                  ?? '8080',  10);
 const ANTHROPIC_UPSTREAM    = process.env.ANTHROPIC_UPSTREAM               ?? 'https://api.anthropic.com';
 const OPENAI_UPSTREAM       = process.env.OPENAI_UPSTREAM                  ?? 'https://api.openai.com';
-const PROXY_RATE_LIMIT_MAX  = parseInt(process.env.PROXY_RATE_LIMIT_MAX    ?? '100',   10);
+const KILLCORD_PROXY_RATE_LIMIT_MAX  = parseInt(process.env.KILLCORD_PROXY_RATE_LIMIT_MAX    ?? '100',   10);
 
 // Default to one worker per logical CPU; set WORKERS=1 to disable clustering.
 const _parsedWorkers = parseInt(process.env.WORKERS ?? '0', 10);
@@ -61,20 +61,20 @@ function adminAuth(req: Request, res: Response, next: NextFunction): void {
 }
 
 // ── Per-user license key authentication ────────────────────────────────────
-// Guards /v1/messages and /v1/chat/completions when AETHER_REQUIRE_LICENSE_KEY
-// is set to "true". Validates the caller's unique x-aether-key against the
+// Guards /v1/messages and /v1/chat/completions when KILLCORD_REQUIRE_LICENSE_KEY
+// is set to "true". Validates the caller's unique x-killcord-key against the
 // in-memory license store (populated by Stripe webhook / /api/billing/key).
 // Strips the header before forwarding so the upstream LLM never sees it.
 
 function licenseAuth(req: Request, res: Response, next: NextFunction): void {
-  if (process.env.AETHER_REQUIRE_LICENSE_KEY !== 'true') { next(); return; }
+  if (process.env.KILLCORD_REQUIRE_LICENSE_KEY !== 'true') { next(); return; }
 
-  const key = (req.headers['x-aether-key'] as string | undefined)?.trim();
+  const key = (req.headers['x-killcord-key'] as string | undefined)?.trim();
 
   if (!key) {
     res.status(401).json({
       error:   'missing_license_key',
-      message: 'Provide your Aether license key via the x-aether-key request header. ' +
+      message: 'Provide your Killcord license key via the x-killcord-key request header. ' +
                'Get one by subscribing at /api/billing/checkout.',
     });
     return;
@@ -85,7 +85,7 @@ function licenseAuth(req: Request, res: Response, next: NextFunction): void {
   if (!license) {
     res.status(401).json({
       error:   'invalid_license_key',
-      message: 'License key not recognised. Check your key or contact landon@bankdrift.com.',
+      message: 'License key not recognised. Check your key or contact support@killcord.dev.',
     });
     return;
   }
@@ -99,8 +99,8 @@ function licenseAuth(req: Request, res: Response, next: NextFunction): void {
   }
 
   // Strip the license key before forwarding — the upstream LLM API has no
-  // knowledge of Aether's auth scheme and must not receive this header.
-  delete req.headers['x-aether-key'];
+  // knowledge of Killcord's auth scheme and must not receive this header.
+  delete req.headers['x-killcord-key'];
 
   next();
 }
@@ -133,7 +133,7 @@ function createApp(): express.Application {
   app.use(cors({
     origin:         corsOrigins,
     methods:        ['GET', 'POST'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-api-key', 'x-aether-key'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-api-key', 'x-killcord-key'],
   }));
 
   // Sliding-window rate limiter — shields against looping or broken AI agents.
@@ -175,25 +175,25 @@ function createApp(): express.Application {
       `# HELP ${name} ${help}\n# TYPE ${name} counter\n${name} ${value}`;
 
     const body = [
-      counter('aether_requests_proxied_total',
+      counter('kc_requests_proxied_total',
         'Total requests proxied since first start (persisted across restarts).',
         s.requests_proxied),
-      counter('aether_tools_received_total',
+      counter('kc_tools_received_total',
         'Total MCP tool schemas received across all proxied requests.',
         s.tools_received),
-      counter('aether_tools_forwarded_total',
+      counter('kc_tools_forwarded_total',
         'Total MCP tool schemas forwarded to the upstream LLM after filtering.',
         s.tools_forwarded),
-      counter('aether_tools_stripped_total',
+      counter('kc_tools_stripped_total',
         'Total MCP tool schemas eliminated by semantic similarity filtering.',
         s.tools_stripped),
-      counter('aether_tokens_received_total',
+      counter('kc_tokens_received_total',
         'Estimated input tokens for all tool schemas received (4 chars = 1 token).',
         s.tokens_received),
-      counter('aether_tokens_forwarded_total',
+      counter('kc_tokens_forwarded_total',
         'Estimated input tokens for tool schemas forwarded to the LLM.',
         s.tokens_forwarded),
-      counter('aether_tokens_saved_total',
+      counter('kc_tokens_saved_total',
         'Estimated input tokens eliminated by semantic filtering.',
         s.tokens_saved),
     ].join('\n\n');
@@ -203,8 +203,8 @@ function createApp(): express.Application {
       .send(body + '\n');
   });
 
-  app.post('/v1/messages',         rateLimitMiddleware(PROXY_RATE_LIMIT_MAX, 60_000, 'proxy'), licenseAuth, anthropicFilterMiddleware(ANTHROPIC_UPSTREAM));
-  app.post('/v1/chat/completions', rateLimitMiddleware(PROXY_RATE_LIMIT_MAX, 60_000, 'proxy'), licenseAuth, openaiFilterMiddleware(OPENAI_UPSTREAM));
+  app.post('/v1/messages',         rateLimitMiddleware(KILLCORD_PROXY_RATE_LIMIT_MAX, 60_000, 'proxy'), licenseAuth, anthropicFilterMiddleware(ANTHROPIC_UPSTREAM));
+  app.post('/v1/chat/completions', rateLimitMiddleware(KILLCORD_PROXY_RATE_LIMIT_MAX, 60_000, 'proxy'), licenseAuth, openaiFilterMiddleware(OPENAI_UPSTREAM));
 
   // Billing — Stripe Checkout Session creation.
   // Intentionally public (no adminAuth): any visitor on the pricing page needs
@@ -214,7 +214,7 @@ function createApp(): express.Application {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-    console.error('[aether] Unhandled error:', err.message);
+    console.error('[killcord] Unhandled error:', err.message);
     if (!res.headersSent) {
       const detail = process.env.NODE_ENV !== 'production' ? err.message : undefined;
       res.status(500).json({ error: 'internal_error', ...(detail ? { detail } : {}) });
@@ -237,13 +237,13 @@ type ClusterMessage =
 
 function runPrimary(): void {
   if (!process.env.ADMIN_API_KEY) {
-    console.warn('[aether] WARNING: ADMIN_API_KEY is not set — /roi, /savings, /health are unprotected.');
+    console.warn('[killcord] WARNING: ADMIN_API_KEY is not set — /roi, /savings, /health are unprotected.');
   }
   if (process.env.STRIPE_SECRET_KEY && !process.env.STRIPE_WEBHOOK_SECRET) {
-    console.warn('[aether] WARNING: STRIPE_WEBHOOK_SECRET is not set — Stripe webhooks cannot be verified.');
+    console.warn('[killcord] WARNING: STRIPE_WEBHOOK_SECRET is not set — Stripe webhooks cannot be verified.');
   }
-  if (process.env.AETHER_REQUIRE_LICENSE_KEY === 'true') {
-    console.log('[aether] License key enforcement is ENABLED — proxy endpoints require x-aether-key.');
+  if (process.env.KILLCORD_REQUIRE_LICENSE_KEY === 'true') {
+    console.log('[killcord] License key enforcement is ENABLED — proxy endpoints require x-killcord-key.');
   }
 
   loadState();
@@ -251,7 +251,7 @@ function runPrimary(): void {
 
   console.log(`
 ╔══════════════════════════════════════════╗
-║          Aether Proxy  v0.1.1            ║
+║          Killcord  v0.1.1            ║
 ╚══════════════════════════════════════════╝
 
   Cluster mode:   ${NUM_WORKERS} workers
@@ -297,14 +297,14 @@ function runPrimary(): void {
   cluster.on('exit', (worker, code, signal) => {
     if (primaryShuttingDown) return;
     if (!worker.exitedAfterDisconnect) {
-      console.warn(`[aether] Worker ${worker.process.pid} died (${signal ?? code}) — restarting`);
+      console.warn(`[killcord] Worker ${worker.process.pid} died (${signal ?? code}) — restarting`);
       cluster.fork();
     }
   });
 
   // Periodic state flush — interval is unref'd so it doesn't delay a clean exit.
   const flushInterval = setInterval(() => {
-    flushStateAsync().catch(err => console.error('[aether] Periodic flush error:', err));
+    flushStateAsync().catch(err => console.error('[killcord] Periodic flush error:', err));
   }, 60_000);
   flushInterval.unref();
 
@@ -313,7 +313,7 @@ function runPrimary(): void {
     primaryShuttingDown = true;
 
     const alive = Object.keys(cluster.workers ?? {}).length;
-    console.log(`\n[aether] ${signal} — draining ${alive} worker(s)...`);
+    console.log(`\n[killcord] ${signal} — draining ${alive} worker(s)...`);
     clearInterval(flushInterval);
 
     // Ask each worker to finish in-flight requests and send remaining stats.
@@ -323,7 +323,7 @@ function runPrimary(): void {
 
     // Force-kill stragglers after 30 s.
     const forceKill = setTimeout(() => {
-      console.warn('[aether] Force-killing remaining workers after 30 s');
+      console.warn('[killcord] Force-killing remaining workers after 30 s');
       for (const w of Object.values(cluster.workers ?? {})) {
         w?.process.kill('SIGKILL');
       }
@@ -335,7 +335,7 @@ function runPrimary(): void {
       if (Object.keys(cluster.workers ?? {}).length === 0) {
         clearTimeout(forceKill);
         flushState();
-        console.log('[aether] Final state flushed. Exiting.');
+        console.log('[killcord] Final state flushed. Exiting.');
         process.exit(0);
       }
     }
@@ -364,9 +364,9 @@ function runWorker(): void {
   server.headersTimeout   = 66_000;
 
   server.listen(PORT, () => {
-    console.log(`[aether] Worker ${process.pid} ready on :${PORT}`);
+    console.log(`[killcord] Worker ${process.pid} ready on :${PORT}`);
     warmup().catch((err: unknown) => {
-      console.warn('[aether] Warmup failed (model will load on first request):', err);
+      console.warn('[killcord] Warmup failed (model will load on first request):', err);
     });
   });
 
@@ -408,14 +408,14 @@ function runWorker(): void {
     }
 
     server.close(() => {
-      console.log(`[aether] Worker ${process.pid} closed (${reason}).`);
+      console.log(`[killcord] Worker ${process.pid} closed (${reason}).`);
       Promise.all([disconnectRedis(), disconnectCbRedis()])
-        .catch(err => console.warn('[aether] Redis disconnect error:', err))
+        .catch(err => console.warn('[killcord] Redis disconnect error:', err))
         .finally(() => process.exit(0));
     });
 
     setTimeout(() => {
-      console.error(`[aether] Worker ${process.pid} forced exit after 30 s.`);
+      console.error(`[killcord] Worker ${process.pid} forced exit after 30 s.`);
       process.exit(1);
     }, 30_000).unref();
   }
@@ -428,13 +428,13 @@ function runWorker(): void {
 
 function runSingleProcess(): void {
   if (!process.env.ADMIN_API_KEY) {
-    console.warn('[aether] WARNING: ADMIN_API_KEY is not set — /roi, /savings, /health are unprotected.');
+    console.warn('[killcord] WARNING: ADMIN_API_KEY is not set — /roi, /savings, /health are unprotected.');
   }
   if (process.env.STRIPE_SECRET_KEY && !process.env.STRIPE_WEBHOOK_SECRET) {
-    console.warn('[aether] WARNING: STRIPE_WEBHOOK_SECRET is not set — Stripe webhooks cannot be verified.');
+    console.warn('[killcord] WARNING: STRIPE_WEBHOOK_SECRET is not set — Stripe webhooks cannot be verified.');
   }
-  if (process.env.AETHER_REQUIRE_LICENSE_KEY === 'true') {
-    console.log('[aether] License key enforcement is ENABLED — proxy endpoints require x-aether-key.');
+  if (process.env.KILLCORD_REQUIRE_LICENSE_KEY === 'true') {
+    console.log('[killcord] License key enforcement is ENABLED — proxy endpoints require x-killcord-key.');
   }
 
   loadState();
@@ -448,7 +448,7 @@ function runSingleProcess(): void {
   server.listen(PORT, () => {
     console.log(`
 ╔══════════════════════════════════════════╗
-║          Aether Proxy  v0.1.1            ║
+║          Killcord  v0.1.1            ║
 ╚══════════════════════════════════════════╝
 
   Listening on  http://localhost:${PORT}
@@ -459,32 +459,32 @@ function runSingleProcess(): void {
   Health check:   http://localhost:${PORT}/health
 `);
     warmup().catch((err: unknown) => {
-      console.warn('[aether] Warmup failed (model will load on first request):', err);
+      console.warn('[killcord] Warmup failed (model will load on first request):', err);
     });
   });
 
   const flushInterval = setInterval(() => {
-    flushStateAsync().catch(err => console.error('[aether] Periodic flush error:', err));
+    flushStateAsync().catch(err => console.error('[killcord] Periodic flush error:', err));
   }, 60_000);
   flushInterval.unref();
 
   function shutdown(signal: string): void {
-    console.log(`\n[aether] ${signal} received — draining in-flight requests...`);
+    console.log(`\n[killcord] ${signal} received — draining in-flight requests...`);
     clearInterval(flushInterval);
 
     server.close(() => {
       flushState();
-      console.log('[aether] State flushed.');
+      console.log('[killcord] State flushed.');
       Promise.all([disconnectRedis(), disconnectCbRedis()])
-        .catch(err => console.warn('[aether] Redis disconnect error:', err))
+        .catch(err => console.warn('[killcord] Redis disconnect error:', err))
         .finally(() => {
-          console.log('[aether] Exiting cleanly.');
+          console.log('[killcord] Exiting cleanly.');
           process.exit(0);
         });
     });
 
     setTimeout(() => {
-      console.error('[aether] Forced exit: connections did not drain within 30 s.');
+      console.error('[killcord] Forced exit: connections did not drain within 30 s.');
       process.exit(1);
     }, 30_000).unref();
   }

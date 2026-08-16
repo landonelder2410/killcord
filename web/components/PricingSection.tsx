@@ -105,7 +105,7 @@ const ADDONS: AddonDef[] = [
       'Compressed NDJSON archive',
       'REST API for trace retrieval',
       'Audit-friendly CSV / JSON export',
-      'Works with any Aether plan',
+      'Works with any Killcord plan',
     ],
   },
 ];

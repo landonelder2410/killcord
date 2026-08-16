@@ -2,8 +2,8 @@ import { CopyButton }         from '../components/CopyButton';
 import { PricingSection }     from '../components/PricingSection';
 import { AgentReplayViewer }  from '../components/AgentReplayViewer';
 
-const INSTALL_CMD = 'npm install -g aether-proxy';
-const GITHUB_URL  = 'https://github.com/landonelder2410/aether-proxy';
+const INSTALL_CMD = 'npm install -g killcord';
+const GITHUB_URL  = 'https://github.com/landonelder2410/killcord';
 
 export default function Home() {
   return (
@@ -11,7 +11,7 @@ export default function Home() {
       {/* ── Nav ─────────────────────────────────────────── */}
       <nav className="nav">
         <div className="nav-inner">
-          <span className="logo">⟁ Aether Proxy</span>
+          <span className="logo">⟁ Killcord</span>
           <div className="nav-links">
             <a className="nav-link" href="#how-it-works">How it works</a>
             <a className="nav-link" href="#features">Features</a>
@@ -33,7 +33,7 @@ export default function Home() {
           <span className="gradient-text">Tools Tax.</span>
         </h1>
         <p className="hero-sub">
-          Cut your AI API bills by up to 90%. Aether Proxy intercepts every request,
+          Cut your AI API bills by up to 90%. Killcord intercepts every request,
           runs a local vector search in milliseconds, and forwards only the 2 tools
           your agent actually needs — before the LLM ever sees them.
         </p>
@@ -63,7 +63,7 @@ export default function Home() {
         </h2>
         <p className="section-sub">
           Every other tool-routing system asks the LLM to figure out which tools to use.
-          Aether does it locally — before the tokens hit the wire.
+          Killcord does it locally — before the tokens hit the wire.
         </p>
 
         <div className="comparison">
@@ -96,22 +96,22 @@ export default function Home() {
           <div className="approach approach-good">
             <div className="approach-header">
               <span className="approach-icon">✅</span>
-              <span>Invisible Push <span className="tag-good">Aether</span></span>
+              <span>Invisible Push <span className="tag-good">Killcord</span></span>
             </div>
             <p>
-              Aether sits between your agent and the API. It embeds the user prompt
+              Killcord sits between your agent and the API. It embeds the user prompt
               locally, cosine-searches against all tool descriptions in microseconds,
               and rewrites the payload to include only the top 2 matches.
             </p>
             <div className="flow-steps">
               <div className="flow-step">
-                <span className="step-num">1</span> Agent → Aether: 50 tool schemas
+                <span className="step-num">1</span> Agent → Killcord: 50 tool schemas
               </div>
               <div className="flow-step highlight">
                 <span className="step-num">2</span> Local MiniLM: filter to top 2
               </div>
               <div className="flow-step highlight">
-                <span className="step-num">3</span> Aether → API: 2 tool schemas
+                <span className="step-num">3</span> Killcord → API: 2 tool schemas
               </div>
               <div className="flow-step highlight">
                 <span className="step-num">4</span> LLM responds — faster, cheaper
@@ -157,7 +157,7 @@ export default function Home() {
             <h3>Stays local</h3>
             <p>
               Your prompts and tool schemas never leave your machine for routing
-              decisions. Aether only forwards the final, filtered request to the
+              decisions. Killcord only forwards the final, filtered request to the
               upstream API you configure.
             </p>
           </div>
@@ -171,10 +171,10 @@ export default function Home() {
 
         <div className="code-block">
           <div><span className="comment"># 1. Install globally</span></div>
-          <div><span className="dollar">$</span><span className="cmd">npm install -g aether-proxy</span></div>
+          <div><span className="dollar">$</span><span className="cmd">npm install -g killcord</span></div>
           <br />
           <div><span className="comment"># 2. Start the proxy (model downloads on first run)</span></div>
-          <div><span className="dollar">$</span><span className="cmd">aether-proxy</span></div>
+          <div><span className="dollar">$</span><span className="cmd">killcord</span></div>
           <br />
           <div><span className="comment"># 3. Point your client here instead of the real API</span></div>
           <div>
@@ -195,7 +195,7 @@ export default function Home() {
           <div>
             <span className="env-var">ANTHROPIC_UPSTREAM</span>
             <span className="cmd">=https://api.anthropic.com</span>
-            <span className="cmd"> aether-proxy</span>
+            <span className="cmd"> killcord</span>
           </div>
         </div>
       </section>
@@ -208,16 +208,16 @@ export default function Home() {
         <div className="footer-inner">
           {/* Brand column */}
           <div className="footer-brand">
-            <span className="logo footer-logo">⟁ Aether Proxy</span>
+            <span className="logo footer-logo">⟁ Killcord</span>
             <p className="footer-tagline">
               Local semantic gateway for AI agents.<br />
               Cut tool-schema token costs by up to 92%.
             </p>
             <p className="footer-copy">
-              © 2026 Aether Proxy. All rights reserved.
+              © 2026 Killcord. All rights reserved.
             </p>
-            <a className="footer-email" href="mailto:landon@bankdrift.com">
-              landon@bankdrift.com
+            <a className="footer-email" href="mailto:support@killcord.dev">
+              support@killcord.dev
             </a>
           </div>
 

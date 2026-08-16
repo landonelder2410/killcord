@@ -1,5 +1,5 @@
 /**
- * OpenTelemetry metrics for Aether Proxy.
+ * OpenTelemetry metrics for Killcord.
  *
  * Uses the @opentelemetry/api no-op implementation by default.
  * Metrics flow to a real backend only when an OTel SDK is registered at
@@ -11,12 +11,12 @@ import { metrics } from '@opentelemetry/api';
 
 import type { Complexity } from './complexity-router';
 
-const meter = metrics.getMeter('aether-proxy', '0.1.1');
+const meter = metrics.getMeter('killcord', '0.1.1');
 
 // Total circuit breaker trips, tagged by trip reason.
 // reason='tool_loop'  — repeated tool call detected in conversation history
 // reason='burst_rate' — request flood or token burst in the sliding window
-const cbTrippedTotal = meter.createCounter('aether_circuit_breaker_tripped_total', {
+const cbTrippedTotal = meter.createCounter('kc_circuit_breaker_tripped_total', {
   description: 'Total number of circuit breaker trips.',
   unit:        '{trip}',
 });
@@ -24,7 +24,7 @@ const cbTrippedTotal = meter.createCounter('aether_circuit_breaker_tripped_total
 // Distribution of request complexity classifications.
 // complexity='simple'  — routed to local/cheap model (or passed through)
 // complexity='complex' — routed to primary cloud LLM API
-const complexityDistribution = meter.createCounter('aether_router_complexity_distribution', {
+const complexityDistribution = meter.createCounter('kc_router_complexity_distribution', {
   description: 'Count of requests by complexity classification.',
   unit:        '{request}',
 });

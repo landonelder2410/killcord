@@ -1,17 +1,17 @@
 {
-  "name": "aether-proxy",
+  "name": "killcord",
   "version": "0.1.1",
   "private": true,
   "description": "Local semantic gateway that eliminates MCP schema bloat between AI agents and LLM APIs",
   "main": "dist/index.js",
   "bin": {
-    "aether-proxy": "dist/index.js"
+    "killcord": "dist/index.js"
   },
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
-    "dev:single": "WORKERS=1 AETHER_REQUIRE_LICENSE_KEY=false tsx src/index.ts",
+    "dev:single": "WORKERS=1 KILLCORD_REQUIRE_LICENSE_KEY=false tsx src/index.ts",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
     "prepublishOnly": "npm run clean && npm run build",

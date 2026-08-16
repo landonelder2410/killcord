@@ -19,7 +19,7 @@ function getRedis(): Redis {
     });
     _redis.on('error', (err: Error) => {
       // Logged once per error burst; doesn't propagate to request handlers.
-      console.warn('[aether] Redis error (rate limiter using in-memory fallback):', err.message);
+      console.warn('[killcord] Redis error (rate limiter using in-memory fallback):', err.message);
     });
   }
   return _redis;
@@ -119,7 +119,7 @@ export function rateLimitMiddleware(
 
   return function rateLimit(req: Request, res: Response, next: NextFunction): void {
     const ip     = req.ip ?? req.socket.remoteAddress ?? 'unknown';
-    const bucket = `aether:${keyPrefix}:${ip}`;
+    const bucket = `killcord:${keyPrefix}:${ip}`;
 
     isAllowed(bucket, safeMax, safeWindow)
       .then(allowed => {

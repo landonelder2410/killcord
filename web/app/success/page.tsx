@@ -4,8 +4,8 @@ import type { Metadata } from 'next';
 import { SuccessContent }  from './SuccessContent';
 
 export const metadata: Metadata = {
-  title: 'Welcome to Aether Proxy — Your License Key',
-  description: 'Your 7-day free trial is active. Copy your unique license key to start using Aether Proxy.',
+  title: 'Welcome to Killcord — Your License Key',
+  description: 'Your 7-day free trial is active. Copy your unique license key to start using Killcord.',
 };
 
 function Loading() {
@@ -22,7 +22,7 @@ export default function SuccessPage() {
     <>
       <nav className="nav">
         <div className="nav-inner">
-          <Link className="logo" href="/" style={{ textDecoration: 'none' }}>⟁ Aether Proxy</Link>
+          <Link className="logo" href="/" style={{ textDecoration: 'none' }}>⟁ Killcord</Link>
         </div>
       </nav>
 

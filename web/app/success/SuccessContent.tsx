@@ -4,7 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 
-const GITHUB = 'https://github.com/landonelder2410/aether-proxy';
+const GITHUB = 'https://github.com/landonelder2410/killcord';
 
 type State =
   | { phase: 'loading' }
@@ -30,7 +30,7 @@ export function SuccessContent() {
       const id = setTimeout(() => {
         setState({
           phase: 'error',
-          message: 'No session ID in URL. Check your email for your license key or contact landon@bankdrift.com.',
+          message: 'No session ID in URL. Check your email for your license key or contact support@killcord.dev.',
         });
       }, 0);
       return () => clearTimeout(id);
@@ -54,7 +54,7 @@ export function SuccessContent() {
           } else {
             setState({
               phase: 'error',
-              message: 'Checkout is taking longer than expected. Check your email or contact landon@bankdrift.com.',
+              message: 'Checkout is taking longer than expected. Check your email or contact support@killcord.dev.',
             });
           }
           return;
@@ -91,7 +91,7 @@ export function SuccessContent() {
         <div className="success-icon success-icon--ok">✓</div>
         <h1 className="success-heading">You&apos;re ready — start building!</h1>
         <p className="success-sub">
-          You&apos;re on the Free / Hacker plan. Self-host Aether Proxy and
+          You&apos;re on the Free / Hacker plan. Self-host Killcord and
           start cutting token costs today — no credit card, no expiry.
         </p>
 
@@ -100,10 +100,10 @@ export function SuccessContent() {
         <section className="success-quickstart">
           <p className="success-qs-label">Get up and running in 60 seconds</p>
           <pre className="success-code-block">{`# 1. Install globally
-$ npm install -g aether-proxy
+$ npm install -g killcord
 
 # 2. Start the proxy
-$ aether-proxy
+$ killcord
 
 # 3. Point your client here
 ANTHROPIC_BASE_URL=http://localhost:8080`}</pre>
@@ -137,7 +137,7 @@ ANTHROPIC_BASE_URL=http://localhost:8080`}</pre>
         <div className="success-icon success-icon--error">✕</div>
         <h1 className="success-heading">Something went wrong</h1>
         <p className="success-sub">{state.message}</p>
-        <a className="success-cta" href="mailto:landon@bankdrift.com">Contact support →</a>
+        <a className="success-cta" href="mailto:support@killcord.dev">Contact support →</a>
       </div>
     );
   }
@@ -150,8 +150,8 @@ ANTHROPIC_BASE_URL=http://localhost:8080`}</pre>
 
 client = anthropic.Anthropic(
     api_key="sk-ant-...",
-    base_url="https://api.driftflow.com",
-    default_headers={"x-aether-key": "${key}"},
+    base_url="https://proxy.killcord.dev",
+    default_headers={"x-killcord-key": "${key}"},
 )`;
 
   return (
@@ -192,7 +192,7 @@ client = anthropic.Anthropic(
       <div className="success-links">
         <a href={`${GITHUB}/blob/main/API.md`} className="success-link" target="_blank" rel="noopener noreferrer">API reference →</a>
         <a href={GITHUB} className="success-link" target="_blank" rel="noopener noreferrer">GitHub →</a>
-        <a href="mailto:landon@bankdrift.com" className="success-link">Support →</a>
+        <a href="mailto:support@killcord.dev" className="success-link">Support →</a>
       </div>
     </div>
   );

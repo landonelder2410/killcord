@@ -7,11 +7,11 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'Aether Proxy — Stop Paying the Tools Tax',
+  title: 'Killcord — Stop Paying the Tools Tax',
   description:
     'Local semantic gateway that cuts AI API costs by 90%. Intercepts MCP tool schemas, runs vector search locally, forwards only what the LLM needs.',
   openGraph: {
-    title: 'Aether Proxy',
+    title: 'Killcord',
     description: 'Stop Paying the Tools Tax. Cut AI API costs by 90%.',
     type: 'website',
   },
