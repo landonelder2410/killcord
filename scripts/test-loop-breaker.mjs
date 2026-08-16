@@ -25,6 +25,7 @@ import { createServer }           from 'node:http';
 import { spawn }                  from 'node:child_process';
 import { fileURLToPath }          from 'node:url';
 import { join, dirname }          from 'node:path';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 
 const __dir   = dirname(fileURLToPath(import.meta.url));
 const srcRoot = join(__dir, '..');
@@ -34,6 +35,7 @@ const BASE       = MANAGED ? 'http://localhost:18080' : (process.argv.find(a => 
 const CB_LIMIT   = MANAGED ? 5 : parseInt(process.env.CB_REQUEST_LIMIT ?? '30', 10);
 const MOCK_PORT  = 19998;
 const PROXY_PORT = 18080;
+const TRACE_DIR  = '/tmp/killcord-test-traces';
 
 let passed = 0, failed = 0;
 let proxyProc = null, mockServer = null;
@@ -83,8 +85,11 @@ async function startProxy() {
       CB_REQUEST_LIMIT:            String(CB_LIMIT),
       CB_TOOL_REPEAT_LIMIT:        '5',
       CB_WINDOW_MS:                '60000',
-      ANTHROPIC_UPSTREAM:          mockBase,
-      OPENAI_UPSTREAM:             mockBase,
+      ANTHROPIC_UPSTREAM:              mockBase,
+      OPENAI_UPSTREAM:                 mockBase,
+      KILLCORD_TRACE_ENABLED:          'true',
+      KILLCORD_TRACE_DIR:              TRACE_DIR,
+      KILLCORD_SEMANTIC_LOOP_ENABLED:  'true',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -268,6 +273,100 @@ ok('S4: simple prompt → "simple"',   simpleHeader  === 'simple',  simpleHeader
 
 console.log(`  Complex: ${complexHeader} (score ${complexReq.headers.get('x-killcord-complexity-score')})`);
 console.log(`  Simple:  ${simpleHeader}  (score ${simpleReq.headers.get('x-killcord-complexity-score')})`);
+
+// ── Scenario 5: Semantic loop detection ──────────────────────────────────────
+// 4 turns with the same tool name but rephrased NL queries. Exact-match won't
+// fire (4 < CB_TOOL_REPEAT_LIMIT=5). Semantic fires at turn #4 because the
+// embeddings of "docker permission denied" phrased four ways are all >0.94 cosine.
+// Requires the MiniLM model to be warm — in managed mode, give it time to load.
+
+console.log('Scenario 5 — Semantic loop detection (rephrased queries, exact-match misses)');
+
+if (MANAGED) {
+  process.stdout.write('  Waiting 6 s for MiniLM embedder to warm up...');
+  await new Promise(r => setTimeout(r, 6000));
+  console.log(' done');
+}
+
+function buildRewordedLoop(queries) {
+  const msgs = [{ role: 'user', content: 'fix the docker error' }];
+  const queries4 = queries.slice(0, 4);
+  for (let i = 0; i < queries4.length; i++) {
+    msgs.push({
+      role:    'assistant',
+      content: [{ type: 'tool_use', id: `rw_${i}`, name: 'search_web', input: { query: queries4[i] } }],
+    });
+    msgs.push({
+      role:    'user',
+      content: [{ type: 'tool_result', tool_use_id: `rw_${i}`, content: 'no relevant results' }],
+    });
+  }
+  msgs.push({ role: 'user', content: 'keep trying' });
+  return msgs;
+}
+
+const s5 = await post('/v1/messages', {
+  model:      'claude-3-5-sonnet-20241022',
+  messages:   buildRewordedLoop([
+    'how to fix docker permission denied error',
+    'fixing docker permission denied issue',
+    'resolve docker permission denied problem',
+    'docker permission denied how do i solve it',
+  ]),
+  max_tokens: 1024,
+});
+
+const s5Semantic = s5.status === 429 && s5.body?.reason === 'semantic_loop';
+const s5Exact    = s5.status === 429 && s5.body?.reason === 'tool_loop';
+
+if (s5Semantic) {
+  ok('S5: semantic loop detected (429)',   true, null);
+  ok('S5: mechanism = semantic',           s5.body?.mechanism === 'semantic', s5.body?.mechanism);
+  ok('S5: similarity score present',       typeof s5.body?.similarity === 'number', s5.body?.similarity);
+  ok('S5: exact-match did NOT trip first', !s5Exact, 'exact fired instead');
+  console.log(`  similarity: ${s5.body?.similarity}  detail: ${s5.body?.detail}\n`);
+} else if (s5Exact) {
+  ok('S5: semantic loop detected',         false, 'exact-match fired instead — embedder may not be warm yet');
+  failed++;
+  console.log(`  Tip: run with a warmed proxy or increase the warmup wait above.\n`);
+} else {
+  ok('S5: semantic loop detected (429)',   false, `status=${s5.status} reason=${s5.body?.reason}`);
+  // Model might still be loading — log for debugging
+  console.log(`  body: ${JSON.stringify(s5.body)}\n`);
+}
+
+// ── Scenario 6: Trace capture ─────────────────────────────────────────────────
+// After any successful proxied request, KILLCORD_TRACE_DIR should contain at
+// least one JSONL file with valid trace records.
+
+console.log('Scenario 6 — Trace file written with valid JSONL');
+
+const traceExists    = existsSync(TRACE_DIR);
+const traceFiles     = traceExists ? readdirSync(TRACE_DIR).filter(f => f.endsWith('.jsonl')) : [];
+
+ok('S6: trace directory exists',    traceExists,          TRACE_DIR);
+ok('S6: at least one .jsonl file',  traceFiles.length > 0, `found ${traceFiles.length} files`);
+
+if (traceFiles.length > 0) {
+  // Read first non-empty JSONL line from any trace file
+  let sampleLine = null;
+  for (const f of traceFiles) {
+    const raw = readFileSync(join(TRACE_DIR, f), 'utf-8').trim();
+    const lines = raw.split('\n').filter(Boolean);
+    if (lines.length > 0) { sampleLine = lines[0]; break; }
+  }
+
+  let parsed = null;
+  try { parsed = sampleLine ? JSON.parse(sampleLine) : null; } catch { /* invalid */ }
+
+  ok('S6: JSONL lines are valid JSON',   parsed !== null,                                sampleLine?.slice(0, 80));
+  ok('S6: trace has traceId',            typeof parsed?.traceId === 'string',            parsed?.traceId);
+  ok('S6: trace has latencyMs',          typeof parsed?.latencyMs === 'number',          parsed?.latencyMs);
+  ok('S6: trace has upstreamStatus',     typeof parsed?.upstreamStatus === 'number',     parsed?.upstreamStatus);
+  ok('S6: trace has circuitBreaker',     parsed?.circuitBreaker !== undefined,           null);
+  ok('S6: no raw email in trace (PII)',   !JSON.stringify(parsed).match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z]{2,}\b/i), 'email found');
+  console.log(`  traceId=${parsed?.traceId}  latency=${parsed?.latencyMs}ms  status=${parsed?.upstreamStatus}\n`);
+}
 
 // ── Teardown + summary ────────────────────────────────────────────────────────
 
