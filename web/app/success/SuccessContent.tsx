@@ -30,7 +30,7 @@ export function SuccessContent() {
       const id = setTimeout(() => {
         setState({
           phase: 'error',
-          message: 'No session ID in URL. Check your email for your license key or open an issue at https://github.com/OWNER/killcord/issues.',
+          message: 'No session ID in URL. Check your email for your license key or open an issue at https://github.com/landonelder2410/killcord/issues.',
         });
       }, 0);
       return () => clearTimeout(id);
@@ -54,7 +54,7 @@ export function SuccessContent() {
           } else {
             setState({
               phase: 'error',
-              message: 'Checkout is taking longer than expected. Check your email or open an issue at https://github.com/OWNER/killcord/issues.',
+              message: 'Checkout is taking longer than expected. Check your email or open an issue at https://github.com/landonelder2410/killcord/issues.',
             });
           }
           return;
@@ -137,7 +137,7 @@ ANTHROPIC_BASE_URL=http://localhost:8080`}</pre>
         <div className="success-icon success-icon--error">✕</div>
         <h1 className="success-heading">Something went wrong</h1>
         <p className="success-sub">{state.message}</p>
-        <a className="success-cta" href="https://github.com/OWNER/killcord/issues">Open an issue →</a>
+        <a className="success-cta" href="https://github.com/landonelder2410/killcord/issues">Open an issue →</a>
       </div>
     );
   }
@@ -192,7 +192,7 @@ client = anthropic.Anthropic(
       <div className="success-links">
         <a href={`${GITHUB}/blob/main/API.md`} className="success-link" target="_blank" rel="noopener noreferrer">API reference →</a>
         <a href={GITHUB} className="success-link" target="_blank" rel="noopener noreferrer">GitHub →</a>
-        <a href="https://github.com/OWNER/killcord/issues" className="success-link">Support →</a>
+        <a href="https://github.com/landonelder2410/killcord/issues" className="success-link">Support →</a>
       </div>
     </div>
   );

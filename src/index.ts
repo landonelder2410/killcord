@@ -85,7 +85,7 @@ function licenseAuth(req: Request, res: Response, next: NextFunction): void {
   if (!license) {
     res.status(401).json({
       error:   'invalid_license_key',
-      message: 'License key not recognised. Check your key or open an issue at https://github.com/OWNER/killcord/issues.',
+      message: 'License key not recognised. Check your key or open an issue at https://github.com/landonelder2410/killcord/issues.',
     });
     return;
   }

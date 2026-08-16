@@ -1,7 +1,6 @@
 {
   "name": "killcord",
   "version": "0.1.1",
-  "private": true,
   "description": "Local semantic gateway that eliminates MCP schema bloat between AI agents and LLM APIs",
   "main": "dist/index.js",
   "bin": {

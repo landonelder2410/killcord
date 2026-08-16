@@ -34,7 +34,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const licenseKey = session.metadata?.licenseKey;
     if (!licenseKey) {
       return NextResponse.json(
-        { error: 'key_not_found', message: 'No license key for this session. Open an issue at https://github.com/OWNER/killcord/issues.' },
+        { error: 'key_not_found', message: 'No license key for this session. Open an issue at https://github.com/landonelder2410/killcord/issues.' },
         { status: 404 },
       );
     }

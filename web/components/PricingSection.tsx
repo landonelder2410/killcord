@@ -110,9 +110,15 @@ const ADDONS: AddonDef[] = [
   },
 ];
 
+const GITHUB_URL = 'https://github.com/landonelder2410/killcord';
+
 // ── Component ──────────────────────────────────────────────────────────────
 
-export function PricingSection() {
+interface PricingSectionProps {
+  billingEnabled: boolean;
+}
+
+export function PricingSection({ billingEnabled }: PricingSectionProps) {
   const [loading, setLoading] = useState<string | null>(null);
   const [errors,  setErrors]  = useState<Record<string, string>>({});
 
@@ -145,6 +151,35 @@ export function PricingSection() {
   }
 
   const busy = loading !== null;
+
+  // When billing is disabled, replace all checkout CTAs with a single
+  // "self-host free" link. No buttons that could return a 503.
+  if (!billingEnabled) {
+    return (
+      <section id="pricing" className="pricing">
+        <p className="section-label">Pricing</p>
+        <h2 className="section-title">Free &amp; open source</h2>
+        <p className="section-sub">
+          Killcord is MIT-licensed. Self-host on any machine — no managed
+          infrastructure, no billing, no rate limits beyond what you configure.
+        </p>
+        <div style={{ textAlign: 'center', margin: '2.5rem 0' }}>
+          <a
+            className="btn-subscribe btn-subscribe--free"
+            href={GITHUB_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ display: 'inline-block', minWidth: 220 }}
+          >
+            Self-host free — view on GitHub →
+          </a>
+          <p style={{ marginTop: '1rem', color: 'var(--muted, #8b93a7)', fontSize: 14 }}>
+            MIT licence · No credit card · No expiry
+          </p>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section id="pricing" className="pricing">

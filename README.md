@@ -17,7 +17,7 @@ npm install -g killcord
 Or run from source:
 
 ```bash
-git clone https://github.com/OWNER/killcord
+git clone https://github.com/landonelder2410/killcord
 cd killcord
 cp .env.example .env   # edit ANTHROPIC_UPSTREAM and/or OPENAI_UPSTREAM
 npm install
@@ -30,7 +30,7 @@ Point your agent at `http://localhost:8080` instead of `https://api.anthropic.co
 
 ```bash
 # Clone and start the proxy
-git clone https://github.com/OWNER/killcord && cd killcord
+git clone https://github.com/landonelder2410/killcord && cd killcord
 cp .env.example .env
 npm install && npm run dev
 
@@ -151,7 +151,7 @@ This would require Killcord to intercept and buffer `tool_result` / `role: tool`
 
 ## Contributing
 
-Open an issue or pull request at https://github.com/OWNER/killcord/issues. This is early-stage software. The semantic threshold (0.94) and NL-extraction heuristic are the most likely areas needing calibration for different agent patterns. If you have a real-world loop sequence that this misses or a false-positive case it catches incorrectly, open an issue with the raw tool call sequence and we will add it to the measurement harness.
+Open an issue or pull request at https://github.com/landonelder2410/killcord/issues. This is early-stage software. The semantic threshold (0.94) and NL-extraction heuristic are the most likely areas needing calibration for different agent patterns. If you have a real-world loop sequence that this misses or a false-positive case it catches incorrectly, open an issue with the raw tool call sequence and we will add it to the measurement harness.
 
 ## License
 

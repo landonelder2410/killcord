@@ -5,6 +5,7 @@ const INSTALL_CMD = 'npm install -g killcord';
 const GITHUB_URL  = 'https://github.com/landonelder2410/killcord';
 
 export default function Home() {
+  const billingEnabled = process.env.KILLCORD_BILLING_ENABLED === 'true';
   return (
     <>
       {/* ── Nav ─────────────────────────────────────────── */}
@@ -197,7 +198,7 @@ export default function Home() {
       </section>
 
       {/* ── Pricing ─────────────────────────────────────── */}
-      <PricingSection />
+      <PricingSection billingEnabled={billingEnabled} />
 
       {/* ── Footer ──────────────────────────────────────── */}
       <footer className="footer">
@@ -212,7 +213,7 @@ export default function Home() {
             <p className="footer-copy">
               © 2026 Killcord. All rights reserved.
             </p>
-            <a className="footer-email" href="https://github.com/OWNER/killcord/issues">
+            <a className="footer-email" href="https://github.com/landonelder2410/killcord/issues">
               GitHub Issues
             </a>
           </div>

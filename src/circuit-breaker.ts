@@ -250,11 +250,18 @@ function extractNaturalLanguage(input: unknown): string {
 }
 
 /** The string embedded for a call, or null if the call has no comparable
- *  semantic content (and therefore cannot form a semantic loop). */
+ *  semantic content (and therefore cannot form a semantic loop).
+ *
+ *  The tool name is intentionally excluded from the embed string: semantic
+ *  detection aims to catch same-intent loops regardless of which tool is called.
+ *  An agent that rotates tool names (search_web → web_search → lookup_docs…)
+ *  while repeating the same query would evade detection if the name were
+ *  included, because different-name prefixes lower cosine similarity below the
+ *  threshold. Exact-match already tracks names; semantic tracks meaning. */
 function embedStringForCall(c: OrderedCall): string | null {
   if (SEMANTIC_INCLUDE_ARGS) return `${c.name}:${JSON.stringify(c.input)}`;
   const nl = extractNaturalLanguage(c.input);
-  return nl ? `${c.name}: ${nl}` : null;
+  return nl || null;
 }
 
 // ── LRU embedding cache (by string hash) ────────────────────────────────────

@@ -60,7 +60,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         {
           message:
             `The "${addonKey}" add-on isn't live yet — ` +
-            'open an issue at https://github.com/OWNER/killcord/issues to be notified on launch.',
+            'open an issue at https://github.com/landonelder2410/killcord/issues to be notified on launch.',
         },
         { status: 503 },
       );

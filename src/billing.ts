@@ -317,7 +317,7 @@ export function billingRouter(): Router {
       if (!licenseKey) {
         res.status(404).json({
           error:   'key_not_found',
-          message: 'No license key found for this session. Open an issue at https://github.com/OWNER/killcord/issues',
+          message: 'No license key found for this session. Open an issue at https://github.com/landonelder2410/killcord/issues',
         });
         return;
       }
