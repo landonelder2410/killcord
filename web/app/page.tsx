@@ -53,6 +53,22 @@ os.environ["ANTHROPIC_BASE_URL"] = "http://localhost:8080"
   },
 ];
 
+// Real output from `npx tsx scripts/demo-runaway-agent.mjs` — Scenario 2.
+// Exact-match sees 4 different tool names and never fires.
+// Semantic trips at turn 4 (cosine similarity 0.969).
+const DEMO_ROWS: Array<{
+  turn: number;
+  tool: string;
+  query: string;
+  status: 'ok' | 'trip' | 'already';
+}> = [
+  { turn: 1, tool: 'search_web',  query: '"how to fix docker permission denied error"',   status: 'ok'      },
+  { turn: 2, tool: 'web_search',  query: '"fixing docker permission denied issue"',        status: 'ok'      },
+  { turn: 3, tool: 'lookup_docs', query: '"resolve docker permission denied problem"',     status: 'ok'      },
+  { turn: 4, tool: 'find_docs',   query: '"docker permission denied how do i solve it"',  status: 'trip'    },
+  { turn: 5, tool: 'query_index', query: '"why does docker say permission denied"',       status: 'already' },
+];
+
 export default function Home() {
   return (
     <>
@@ -101,14 +117,48 @@ export default function Home() {
           <h2 className="section-h2">Iteration caps count tool names. Agents that rotate names evade them forever.</h2>
           <p className="section-body">
             Every loop-detection scheme you already have counts how many times the same tool name
-            appears. The moment your agent rotates — <code>search_web</code> this turn,
-            <code> web_search</code> next turn, <code>lookup_docs</code> after that — exact-match
+            appears. The moment your agent rotates — <code>search_web</code> this turn,{' '}
+            <code>web_search</code> next turn, <code>lookup_docs</code> after that — exact-match
             never fires. The loop is <strong>unbounded</strong>: it runs until a rate limit, a
             billing cap, or a timeout you set somewhere else entirely.
           </p>
           <p className="section-body">
             Killcord embeds the <em>meaning</em> of each call, so rotating tool names doesn't help.
           </p>
+
+          {/* Real demo output */}
+          <div className="term-block">
+            <div className="term-titlebar">
+              <div className="term-dots">
+                <span className="term-dot" />
+                <span className="term-dot" />
+                <span className="term-dot" />
+              </div>
+              <span className="term-filename">
+                Scenario 2 — 10 rotating tool names. Exact-match: 0 trips. Semantic: trips at turn 4.
+              </span>
+            </div>
+            <div className="term-body">
+              <div className="term-rows">
+                {DEMO_ROWS.map(row => (
+                  <div
+                    key={row.turn}
+                    className={`term-row${row.status === 'trip' ? ' term-row-trip' : ''}`}
+                  >
+                    <span className="term-turn">{row.turn}</span>
+                    <span className="term-tool">{row.tool}</span>
+                    <span className="term-q">{row.query}</span>
+                    {row.status === 'ok'      && <span className="term-ok">ok</span>}
+                    {row.status === 'trip'    && <span className="term-tripped">TRIPPED</span>}
+                    {row.status === 'already' && <span className="term-already">(already tripped)</span>}
+                  </div>
+                ))}
+                <div className="term-trip-detail">
+                  HTTP 429&nbsp;&nbsp;·&nbsp;&nbsp;similarity 0.969&nbsp;&nbsp;·&nbsp;&nbsp;exact-match: 0 trips after 40 turns with 10 rotating names
+                </div>
+              </div>
+            </div>
+          </div>
 
           <div className="comparison-table">
             <div className="ct-header">
@@ -218,7 +268,7 @@ export default function Home() {
             <div className="privacy-item">
               <span className="privacy-dot privacy-dot--green" />
               <div>
-                <strong>Model runs locally</strong><br />
+                <strong>Model runs locally</strong>
                 MiniLM-L6-v2 (~90 MB) downloads once from HuggingFace on first run, then runs
                 entirely on your CPU via ONNX Runtime. Zero per-request network calls for
                 embeddings. Works offline after that initial download.
@@ -227,7 +277,7 @@ export default function Home() {
             <div className="privacy-item">
               <span className="privacy-dot privacy-dot--green" />
               <div>
-                <strong>One upstream connection only</strong><br />
+                <strong>One upstream connection only</strong>
                 The only outbound TCP connection is to the LLM API you point it at
                 (<code>ANTHROPIC_UPSTREAM</code> / <code>OPENAI_UPSTREAM</code>). No telemetry,
                 no analytics, no callbacks to any Killcord-controlled server.
@@ -236,7 +286,7 @@ export default function Home() {
             <div className="privacy-item">
               <span className="privacy-dot privacy-dot--green" />
               <div>
-                <strong>Optional extras stay optional</strong><br />
+                <strong>Optional extras stay optional</strong>
                 Redis (cross-request rate limiting) and Stripe (billing) are only contacted if you
                 set <code>REDIS_URL</code> or <code>STRIPE_SECRET_KEY</code>. Neither is required
                 for the core loop detection to work.
@@ -245,7 +295,7 @@ export default function Home() {
             <div className="privacy-item">
               <span className="privacy-dot privacy-dot--green" />
               <div>
-                <strong>Verifiable</strong><br />
+                <strong>Verifiable</strong>
                 Run <code>node scripts/verify-no-telemetry.mjs</code> to confirm no unexpected
                 outbound connections. The script starts the proxy against a mock upstream, fires
                 real requests, and asserts the only host contacted is the mock.
