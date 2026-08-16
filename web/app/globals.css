@@ -1,62 +1,53 @@
 /* ── Design tokens ──────────────────────────────────────────────────────────
 
-   Type scale — exactly 5 sizes, defined as CSS variables:
+   Type scale — exactly 5 sizes:
      --fs-xs:   0.75rem  (12px)  labels, pills, meta
      --fs-sm:   0.875rem (14px)  secondary prose, code, table cells
      --fs-base: 1rem     (16px)  body
      --fs-lg:   1.375rem (22px)  section h2
      --fs-hero: 2rem     (32px)  hero h1 — up to 2.5rem at 640px+
 
-   Font families: Geist Sans + Geist Mono (self-hosted via next/font).
-   CSS variables injected by layout.tsx via GeistSans.variable / GeistMono.variable.
+   Fonts: Geist Sans + Geist Mono via next/font (layout.tsx).
 
-   Accent: --purple #a78bfa (violet-400).
-   WCAG AA contrast on #0d0d0d: 7.1:1 ✓
+   Accents:
+     --amber: #f5a623  wordmark, section labels             10.3:1 ✓
+     --trip:  #ff6b35  TRIPPED + 429 in terminal             7.5:1 ✓
 
-   All body text colors verified against #0d0d0d:
-     #e8e8e8  15.6:1  primary       ✓
-     #a3a3a3   7.4:1  secondary     ✓
-     #8a8a8a   5.1:1  captions      ✓ (≥4.5 required)
+   Body text on #0d0d0d:
+     #e8e8e8  15.6:1  ✓   #a3a3a3  7.4:1  ✓   #8a8a8a  5.1:1  ✓
    ────────────────────────────────────────────────────────────────────────── */
 :root {
-  /* Type scale */
   --fs-xs:   0.75rem;
   --fs-sm:   0.875rem;
   --fs-base: 1rem;
   --fs-lg:   1.375rem;
   --fs-hero: 2rem;
 
-  /* Font stacks — variables injected by Geist via layout.tsx */
   --font-sans: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, 'Cascadia Code', monospace;
 
-  /* Color */
   --bg:      #0d0d0d;
-  --bg-sub:  #181818;   /* privacy section, card surfaces */
-  --bg-code: #1e1e1e;   /* code blocks */
+  --bg-sub:  #181818;
+  --bg-code: #1e1e1e;
   --border:  #262626;
   --border-2:#363636;
-  --text:    #e8e8e8;   /* 15.6:1 ✓ */
-  --text-2:  #a3a3a3;   /* 7.4:1  ✓ */
-  --text-3:  #8a8a8a;   /* 5.1:1  ✓ */
-  --purple:  #a78bfa;   /* 7.1:1  ✓  — one accent, nothing else */
+  --text:    #e8e8e8;
+  --text-2:  #a3a3a3;
+  --text-3:  #8a8a8a;
+  --amber:   #f5a623;   /* wordmark + section labels */
+  --trip:    #ff6b35;   /* TRIPPED + 429 in terminal */
 
-  /* Terminal surface — lighter than page, reads as a raised device */
   --term-bg:  #1a1a1a;
   --term-bar: #222222;
   --term-txt: #a3a3a3;
   --term-hi:  #e8e8e8;
   --term-dim: #525252;
 
-  /* Layout */
   --max-w: 720px;
   --px:    20px;
 }
 @media (min-width: 640px) {
-  :root {
-    --fs-hero: 2.5rem;
-    --px: 32px;
-  }
+  :root { --fs-hero: 2.5rem; --px: 32px; }
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -104,31 +95,13 @@ code {
   justify-content: space-between;
   gap: 16px;
 }
-
-/* Mark + wordmark lockup */
-.header-brand {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-.header-mark {
-  /* Height matches cap height of the 14px wordmark (~70% of em).
-     viewBox is 2:1 (32×16 cropped), so width auto = 2× height. */
-  height: 0.6em;
-  width: auto;
-  color: var(--purple);
-  flex-shrink: 0;
-  /* Nudge down 1px to optically sit on the text baseline center */
-  position: relative;
-  top: 1px;
-}
 .logo {
   font-family: var(--font-mono);
-  font-size: var(--fs-sm);     /* 14px */
+  font-size: var(--fs-sm);
   font-weight: 700;
-  color: var(--purple);
+  color: var(--amber);
   letter-spacing: -0.03em;
+  flex-shrink: 0;
 }
 .header-links {
   display: flex;
@@ -161,26 +134,15 @@ code {
 .hero { padding: 40px 0 24px; }
 @media (min-width: 640px) { .hero { padding: 72px 0 56px; } }
 
-/* Mark above wordmark — logo lockup. Height ~3/4 of h1 font size.
-   viewBox 2:1 so width = 2 × height. Sits 16px above the h1. */
-.hero-mark {
-  display: block;
-  height: calc(var(--fs-hero) * 0.65);
-  width: auto;
-  color: var(--purple);
-  margin-bottom: 12px;
-}
-
 .hero-h1 {
   font-family: var(--font-mono);
   font-size: var(--fs-hero);
   font-weight: 700;
   letter-spacing: -0.03em;
   line-height: 1.05;
-  color: var(--purple);
+  color: var(--amber);
   margin-bottom: 12px;
 }
-
 .hero-sub {
   font-size: var(--fs-base);
   font-weight: 400;
@@ -231,7 +193,7 @@ code {
   min-width: 52px;
 }
 .copy-btn:hover  { color: var(--text); background: var(--border); }
-.copy-btn.copied { color: var(--purple); }
+.copy-btn.copied { color: var(--amber); }
 
 .hero-links { display: flex; gap: 8px; flex-wrap: wrap; }
 .btn {
@@ -271,27 +233,35 @@ code {
   align-items: center;
   gap: 10px;
   border-bottom: 1px solid var(--border);
+  overflow: hidden;         /* prevent title from blowing out the bar */
 }
 .demo-dots { display: flex; gap: 6px; flex-shrink: 0; }
 .demo-dot  { width: 10px; height: 10px; border-radius: 50%; background: var(--border-2); }
-.demo-title { color: var(--term-dim); font-size: var(--fs-xs); font-weight: 500; }
+.demo-title {
+  color: var(--term-dim);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
 .demo-body {
   padding: 16px 20px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+  /* No overflow-x: auto — content must fit at 375px without scrolling */
 }
 .demo-pre {
   white-space: pre;
-  line-height: 1.5;           /* tighter in terminal = more scannable */
+  line-height: 1.5;
   color: var(--term-txt);
 }
 
-/* Terminal syntax — only t-trip gets the accent, everything else grayscale */
+/* Terminal syntax: only trip lines use color, everything else grayscale */
 .t-dim   { color: var(--term-dim); }
 .t-hi    { color: var(--term-hi); }
 .t-tool  { color: var(--term-hi); }
 .t-ok    { color: var(--text-3); }
-.t-trip  { color: var(--purple); font-weight: 700; }
+.t-trip  { color: var(--trip); font-weight: 700; }   /* hot orange: TRIPPED + 429 */
 .t-key   { color: var(--text-2); }
 .t-str   { color: var(--text-2); }
 .t-num   { color: var(--text); }
@@ -315,12 +285,12 @@ code {
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--text-3);
+  color: var(--amber);       /* amber: section labels are warning-system category markers */
   margin-bottom: 12px;
 }
 .section-h2 {
   font-size: var(--fs-lg);
-  font-weight: 600;           /* 600, not 700 — heavy reads dated */
+  font-weight: 600;
   letter-spacing: -0.03em;
   line-height: 1.05;
   color: var(--text);
@@ -378,8 +348,9 @@ code {
 }
 .ct-row:last-child { border-bottom: none; }
 .ct-scenario { color: var(--text-2); }
+/* Table cells: grayscale — data speaks for itself */
 .ct-good {
-  color: var(--purple);
+  color: var(--text-2);
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
   font-weight: 600;
@@ -388,7 +359,7 @@ code {
   text-align: center;
 }
 .ct-bad {
-  color: var(--purple);
+  color: var(--text-2);
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
   font-weight: 600;
@@ -574,16 +545,7 @@ code {
 .footer-left {
   display: flex;
   align-items: center;
-  gap: 12px;
-}
-/* Footer mark: small, grayscale */
-.footer-mark {
-  height: 0.55em;
-  width: auto;
-  color: var(--text-3);
-  flex-shrink: 0;
-  position: relative;
-  top: 1px;
+  gap: 16px;
 }
 .footer-copy {
   font-size: var(--fs-xs);

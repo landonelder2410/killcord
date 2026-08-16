@@ -1,8 +1,7 @@
 import { CopyButton } from '../components/CopyButton';
-import { BrokenCircuit } from '../components/BrokenCircuit';
 
-const GITHUB_URL = 'https://github.com/landonelder2410/killcord';
-const NPM_URL    = 'https://www.npmjs.com/package/killcord';
+const GITHUB_URL  = 'https://github.com/landonelder2410/killcord';
+const NPM_URL     = 'https://www.npmjs.com/package/killcord';
 const INSTALL_CMD = 'npm install -g killcord';
 
 const FRAMEWORK_SNIPPETS = [
@@ -54,11 +53,7 @@ export default function Home() {
       {/* ── Header ────────────────────────────────────────────────────── */}
       <header className="site-header">
         <div className="header-inner">
-          {/* Mark left of wordmark, optically aligned to cap height */}
-          <div className="header-brand">
-            <BrokenCircuit className="header-mark" />
-            <span className="logo">killcord</span>
-          </div>
+          <span className="logo">killcord</span>
           <nav className="header-links">
             <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">GitHub</a>
             <a href={NPM_URL}    target="_blank" rel="noopener noreferrer">npm</a>
@@ -71,10 +66,6 @@ export default function Home() {
 
         {/* ── 1. HERO ────────────────────────────────────────────────── */}
         <section className="hero">
-          {/* Mark above wordmark — logo lockup. Omitting from hero
-              would lose the brand anchor; above is cleaner than beside
-              at this scale since the h1 is large enough to pair with. */}
-          <BrokenCircuit className="hero-mark" />
           <h1 className="hero-h1">killcord</h1>
           <p className="hero-sub">
             Agents that loop don't stop — they burn budget until something else breaks.
@@ -91,7 +82,11 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── TERMINAL DEMO — standalone, above all prose sections ───── */}
+        {/* ── TERMINAL DEMO ─────────────────────────────────────────────
+            Content sized to fit 375px viewport without horizontal scroll.
+            Max line length ~31 chars at 14px Geist Mono (8.4px/char):
+            335px content area - 40px demo-body padding = 295px / 8.4 ≈ 35ch.
+            Query strings dropped — tool name rotation is the point anyway.  */}
         <div className="demo-wrap">
           <div className="demo-terminal">
             <div className="demo-titlebar">
@@ -100,27 +95,24 @@ export default function Home() {
                 <span className="demo-dot" />
                 <span className="demo-dot" />
               </div>
-              <span className="demo-title">demo-runaway-agent.mjs — Scenario 2: 10 rotating tool names</span>
+              <span className="demo-title">scenario 2 — 10 rotating tool names</span>
             </div>
             <div className="demo-body">
               <pre className="demo-pre">{
-`  `}<span className="t-dim">turn 1</span>{`  `}<span className="t-tool">search_web </span>{`  "how to fix docker permission denied error"   `}<span className="t-ok">ok</span>{`
-  `}<span className="t-dim">turn 2</span>{`  `}<span className="t-tool">web_search </span>{`  "fixing docker permission denied issue"        `}<span className="t-ok">ok</span>{`
-  `}<span className="t-dim">turn 3</span>{`  `}<span className="t-tool">lookup_docs</span>{`  "resolve docker permission denied problem"     `}<span className="t-ok">ok</span>{`
-  `}<span className="t-dim">turn 4</span>{`  `}<span className="t-tool">find_docs  </span>{`  "docker permission denied how do i solve it"  `}<span className="t-trip">TRIPPED</span>{`
+`  `}<span className="t-dim">turn 1</span>{`  `}<span className="t-tool">{`search_web  `}</span>{`  `}<span className="t-ok">ok</span>{`
+  `}<span className="t-dim">turn 2</span>{`  `}<span className="t-tool">{`web_search  `}</span>{`  `}<span className="t-ok">ok</span>{`
+  `}<span className="t-dim">turn 3</span>{`  `}<span className="t-tool">{`lookup_docs `}</span>{`  `}<span className="t-ok">ok</span>{`
+  `}<span className="t-dim">turn 4</span>{`  `}<span className="t-tool">{`find_docs   `}</span>{`  `}<span className="t-trip">TRIPPED</span>{`
 
-`}<span className="t-dim">  # exact-match counter: search_web=1 web_search=1 lookup_docs=1 find_docs=1 — never fires
-  # semantic similarity: 0.969 — threshold 0.94 exceeded at turn 4
+`}<span className="t-dim">{`  # exact-match   never fires
+  # semantic       0.969 at turn 4
+`}</span>{`
+  `}<span className="t-trip">429 Too Many Requests</span>{`
 
-</span>{`  HTTP/1.1 `}<span className="t-trip">429 Too Many Requests</span>{`
-
-  {
-    `}<span className="t-key">"error"</span>{`:      `}<span className="t-str">"circuit_breaker_tripped"</span>{`,
-    `}<span className="t-key">"mechanism"</span>{`:  `}<span className="t-str">"semantic"</span>{`,
-    `}<span className="t-key">"similarity"</span>{`: `}<span className="t-num">0.969</span>{`,
-    `}<span className="t-key">"detail"</span>{`:     `}<span className="t-str">"Tool call #4 is 96.9% similar to 3 of the previous 3 calls."</span>{`,
-    `}<span className="t-key">"retry_after"</span>{`: `}<span className="t-num">60</span>{`
-  }`}
+  `}<span className="t-key">"error"</span>{`:      `}<span className="t-str">"circuit_breaker_tripped"</span>{`
+  `}<span className="t-key">"mechanism"</span>{`:  `}<span className="t-str">"semantic"</span>{`
+  `}<span className="t-key">"similarity"</span>{`: `}<span className="t-num">0.969</span>{`
+  `}<span className="t-key">"retry_after"</span>{`: `}<span className="t-num">60</span>
               </pre>
             </div>
           </div>
@@ -211,7 +203,7 @@ export default function Home() {
   "reason":      "semantic_loop",
   "mechanism":   "semantic",
   "similarity":  0.969,
-  "detail":      "Tool call #4 is 96.9% semantically similar to 3 of the previous 3 calls. The agent appears stuck repeating the same action with cosmetic changes.",
+  "detail":      "Tool call #4 is 96.9% semantically similar to 3 of the previous 3 calls.",
   "retry_after": 60
 }`} />
             <pre>{`HTTP/1.1 429 Too Many Requests
@@ -345,8 +337,6 @@ OPENAI_UPSTREAM=https://api.openai.com     killcord`}</pre>
       <footer className="site-footer">
         <div className="footer-inner">
           <div className="footer-left">
-            {/* Mark in footer: small, grayscale via footer-mark class */}
-            <BrokenCircuit className="footer-mark" />
             <span className="logo">killcord</span>
             <span className="footer-copy">MIT 0.1.x · Driftflow LLC</span>
           </div>

@@ -24,7 +24,7 @@ const W = 1200;
 const H = 630;
 
 const BG      = '#0d0d0d';
-const AMBER   = '#a78bfa';
+const AMBER   = '#f5a623';
 const TEXT    = '#e8e8e8';
 const MUTED   = '#a3a3a3';
 const CODEBG  = '#1e1e1e';
