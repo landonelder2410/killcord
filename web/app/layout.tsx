@@ -7,6 +7,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://killcord.vercel.app'),
   title: 'Killcord — Stop runaway AI agent loops',
   description:
     'Local proxy that detects and trips semantic circuit breakers on AI agent loops. ' +
