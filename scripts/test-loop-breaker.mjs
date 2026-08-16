@@ -80,7 +80,6 @@ async function startProxy() {
       ...process.env,
       PORT:                        String(PROXY_PORT),
       WORKERS:                     '1',
-      KILLCORD_REQUIRE_LICENSE_KEY:  'false',
       ADMIN_API_KEY:               '',
       CB_REQUEST_LIMIT:            String(CB_LIMIT),
       CB_TOOL_REPEAT_LIMIT:        '5',

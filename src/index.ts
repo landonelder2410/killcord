@@ -60,47 +60,21 @@ function adminAuth(req: Request, res: Response, next: NextFunction): void {
   });
 }
 
-// ── Per-user license key authentication ────────────────────────────────────
-// Guards /v1/messages and /v1/chat/completions when KILLCORD_REQUIRE_LICENSE_KEY
-// is set to "true". Validates the caller's unique x-killcord-key against the
-// in-memory license store (populated by Stripe webhook / /api/billing/key).
-// Strips the header before forwarding so the upstream LLM never sees it.
+// ── License record logging ─────────────────────────────────────────────────
+// Killcord never blocks a request over licensing. This middleware strips the
+// x-killcord-key header (so the upstream never sees it), looks up the caller's
+// license record if present, and logs the tier for observability — nothing more.
 
-function licenseAuth(req: Request, res: Response, next: NextFunction): void {
-  if (process.env.KILLCORD_REQUIRE_LICENSE_KEY !== 'true') { next(); return; }
-
+function logLicenseTier(req: Request, _res: Response, next: NextFunction): void {
   const key = (req.headers['x-killcord-key'] as string | undefined)?.trim();
-
-  if (!key) {
-    res.status(401).json({
-      error:   'missing_license_key',
-      message: 'Provide your Killcord license key via the x-killcord-key request header. ' +
-               'Get one by subscribing at /api/billing/checkout.',
-    });
-    return;
-  }
-
-  const license = getLicenseByKey(key);
-
-  if (!license) {
-    res.status(401).json({
-      error:   'invalid_license_key',
-      message: 'License key not recognised. Check your key or open an issue at https://github.com/landonelder2410/killcord/issues.',
-    });
-    return;
-  }
-
-  if (license.status === 'revoked') {
-    res.status(403).json({
-      error:   'license_revoked',
-      message: 'Your subscription has ended. Renew at /api/billing/checkout.',
-    });
-    return;
-  }
-
-  // Strip the license key before forwarding — the upstream LLM API has no
-  // knowledge of Killcord's auth scheme and must not receive this header.
   delete req.headers['x-killcord-key'];
+
+  if (key) {
+    const license = getLicenseByKey(key);
+    if (license) {
+      console.log(`[killcord] request tier=${license.tier} status=${license.status}`);
+    }
+  }
 
   next();
 }
@@ -159,7 +133,7 @@ function createApp(): express.Application {
   app.get('/health', adminAuth, (_req: Request, res: Response) => {
     res.json({
       status:    'ok',
-      version:   '0.1.1',
+      version:   '0.1.3',
       upstreams: { anthropic: ANTHROPIC_UPSTREAM, openai: OPENAI_UPSTREAM },
     });
   });
@@ -203,8 +177,8 @@ function createApp(): express.Application {
       .send(body + '\n');
   });
 
-  app.post('/v1/messages',         rateLimitMiddleware(KILLCORD_PROXY_RATE_LIMIT_MAX, 60_000, 'proxy'), licenseAuth, anthropicFilterMiddleware(ANTHROPIC_UPSTREAM));
-  app.post('/v1/chat/completions', rateLimitMiddleware(KILLCORD_PROXY_RATE_LIMIT_MAX, 60_000, 'proxy'), licenseAuth, openaiFilterMiddleware(OPENAI_UPSTREAM));
+  app.post('/v1/messages',         rateLimitMiddleware(KILLCORD_PROXY_RATE_LIMIT_MAX, 60_000, 'proxy'), logLicenseTier, anthropicFilterMiddleware(ANTHROPIC_UPSTREAM));
+  app.post('/v1/chat/completions', rateLimitMiddleware(KILLCORD_PROXY_RATE_LIMIT_MAX, 60_000, 'proxy'), logLicenseTier, openaiFilterMiddleware(OPENAI_UPSTREAM));
 
   // Billing — Stripe Checkout Session creation.
   // Intentionally public (no adminAuth): any visitor on the pricing page needs
@@ -242,16 +216,18 @@ function runPrimary(): void {
   if (process.env.STRIPE_SECRET_KEY && !process.env.STRIPE_WEBHOOK_SECRET) {
     console.warn('[killcord] WARNING: STRIPE_WEBHOOK_SECRET is not set — Stripe webhooks cannot be verified.');
   }
-  if (process.env.KILLCORD_REQUIRE_LICENSE_KEY === 'true') {
-    console.log('[killcord] License key enforcement is ENABLED — proxy endpoints require x-killcord-key.');
-  }
 
   loadState();
   loadLicenseState();
 
+  const licenseCount = Object.keys(getLicenseStore().byKey).length;
+  if (licenseCount > 0) {
+    console.log(`[killcord] ${licenseCount} license record(s) loaded.`);
+  }
+
   console.log(`
 ╔══════════════════════════════════════════╗
-║          Killcord  v0.1.1            ║
+║          Killcord  v0.1.3            ║
 ╚══════════════════════════════════════════╝
 
   Cluster mode:   ${NUM_WORKERS} workers
@@ -433,10 +409,6 @@ function runSingleProcess(): void {
   if (process.env.STRIPE_SECRET_KEY && !process.env.STRIPE_WEBHOOK_SECRET) {
     console.warn('[killcord] WARNING: STRIPE_WEBHOOK_SECRET is not set — Stripe webhooks cannot be verified.');
   }
-  if (process.env.KILLCORD_REQUIRE_LICENSE_KEY === 'true') {
-    console.log('[killcord] License key enforcement is ENABLED — proxy endpoints require x-killcord-key.');
-  }
-
   loadState();
   loadLicenseState();
 
@@ -448,7 +420,7 @@ function runSingleProcess(): void {
   server.listen(PORT, () => {
     console.log(`
 ╔══════════════════════════════════════════╗
-║          Killcord  v0.1.1            ║
+║          Killcord  v0.1.3            ║
 ╚══════════════════════════════════════════╝
 
   Listening on  http://localhost:${PORT}

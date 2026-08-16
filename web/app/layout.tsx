@@ -7,12 +7,16 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'Killcord — Stop Paying the Tools Tax',
+  title: 'Killcord — Stop runaway AI agent loops',
   description:
-    'Local semantic gateway that cuts AI API costs by 90%. Intercepts MCP tool schemas, runs vector search locally, forwards only what the LLM needs.',
+    'Local proxy that detects and trips semantic circuit breakers on AI agent loops. ' +
+    'Catches tool-name rotation attacks that exact-match misses. ' +
+    'Runs on your machine — no prompts or API keys leave your infrastructure.',
   openGraph: {
-    title: 'Killcord',
-    description: 'Stop Paying the Tools Tax. Cut AI API costs by 90%.',
+    title: 'Killcord — Stop runaway AI agent loops',
+    description:
+      'Agents that loop don\'t stop — they burn budget until something else breaks. ' +
+      'Killcord embeds the meaning of each tool call so rotating names doesn\'t help.',
     type: 'website',
   },
 };

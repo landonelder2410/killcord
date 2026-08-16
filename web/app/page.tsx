@@ -1,241 +1,338 @@
-import { CopyButton }         from '../components/CopyButton';
-import { PricingSection }     from '../components/PricingSection';
+import { CopyButton } from '../components/CopyButton';
+
+const GITHUB_URL = 'https://github.com/landonelder2410/killcord';
+const NPM_URL    = 'https://www.npmjs.com/package/killcord';
 
 const INSTALL_CMD = 'npm install -g killcord';
-const GITHUB_URL  = 'https://github.com/landonelder2410/killcord';
+
+const FRAMEWORK_SNIPPETS = [
+  {
+    label: 'Anthropic SDK',
+    lang: 'python',
+    code: `import anthropic
+
+client = anthropic.Anthropic(
+    base_url="http://localhost:8080",
+)`,
+  },
+  {
+    label: 'OpenAI SDK',
+    lang: 'python',
+    code: `from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://localhost:8080/v1",
+)`,
+  },
+  {
+    label: 'LangChain',
+    lang: 'python',
+    code: `from langchain_anthropic import ChatAnthropic
+
+llm = ChatAnthropic(
+    anthropic_api_url="http://localhost:8080",
+)`,
+  },
+  {
+    label: 'AutoGen',
+    lang: 'python',
+    code: `from autogen import AssistantAgent
+
+agent = AssistantAgent(
+    "assistant",
+    llm_config={"base_url": "http://localhost:8080"},
+)`,
+  },
+  {
+    label: 'CrewAI',
+    lang: 'python',
+    code: `import os
+os.environ["ANTHROPIC_BASE_URL"] = "http://localhost:8080"
+
+# rest of your CrewAI setup unchanged`,
+  },
+];
 
 export default function Home() {
-  const billingEnabled = process.env.KILLCORD_BILLING_ENABLED === 'true';
   return (
     <>
-      {/* ── Nav ─────────────────────────────────────────── */}
-      <nav className="nav">
-        <div className="nav-inner">
-          <span className="logo">⟁ Killcord</span>
-          <div className="nav-links">
-            <a className="nav-link" href="#how-it-works">How it works</a>
-            <a className="nav-link" href="#features">Features</a>
-            <a className="nav-link" href="#quickstart">Quick start</a>
-            <a className="nav-link" href="#pricing">Pricing</a>
-            <a className="nav-link" href={GITHUB_URL} target="_blank" rel="noopener noreferrer">GitHub</a>
-            <a className="nav-link-cta" href="#pricing">
-              Start Free Trial →
+      {/* ── Header ─────────────────────────────────────────────────────── */}
+      <header className="site-header">
+        <div className="header-inner">
+          <span className="logo">killcord</span>
+          <nav className="header-links">
+            <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">GitHub</a>
+            <a href={NPM_URL}    target="_blank" rel="noopener noreferrer">npm</a>
+            <a href="#quickstart" className="header-cta">Get started</a>
+          </nav>
+        </div>
+      </header>
+
+      <main className="main-col">
+
+        {/* ── 1. HERO ──────────────────────────────────────────────────── */}
+        <section className="hero">
+          <h1 className="hero-h1">killcord</h1>
+          <p className="hero-sub">
+            Agents that loop don't stop — they burn budget until something else breaks.
+          </p>
+
+          <div className="install-wrap">
+            <code className="install-cmd">
+              <span className="dollar">$</span>
+              {INSTALL_CMD}
+            </code>
+            <CopyButton text={INSTALL_CMD} />
+          </div>
+
+          <div className="hero-links">
+            <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="btn btn-ghost">
+              GitHub
+            </a>
+            <a href={NPM_URL} target="_blank" rel="noopener noreferrer" className="btn btn-ghost">
+              npm
             </a>
           </div>
-        </div>
-      </nav>
+        </section>
 
-      {/* ── Hero ────────────────────────────────────────── */}
-      <section className="hero">
-        <div className="hero-badge">Open Source · MIT · Zero API Cost</div>
-        <h1 className="hero-headline">
-          Stop Paying the<br />
-          <span className="gradient-text">Tools Tax.</span>
-        </h1>
-        <p className="hero-sub">
-          Cut your AI API bills by up to 90%. Killcord intercepts every request,
-          runs a local vector search in milliseconds, and forwards only the 2 tools
-          your agent actually needs — before the LLM ever sees them.
-        </p>
-        <div className="install-wrap">
-          <code className="install-cmd">
-            <span className="dollar">$</span>
-            {INSTALL_CMD}
-          </code>
-          <CopyButton text={INSTALL_CMD} />
-        </div>
-        <p className="hero-note">
-          Then point your client to <code>localhost:8080</code> — no other changes needed.
-        </p>
-        <a className="hero-cta" href="#pricing">
-          Start your 7-day free trial →
-        </a>
-      </section>
+        {/* ── 2. THE PROBLEM ───────────────────────────────────────────── */}
+        <section className="section" id="problem">
+          <p className="section-label">The problem</p>
+          <h2 className="section-h2">Iteration caps count tool names. Agents that rotate names evade them forever.</h2>
+          <p className="section-body">
+            Every loop-detection scheme you already have counts how many times the same tool name
+            appears. The moment your agent rotates — <code>search_web</code> this turn,
+            <code> web_search</code> next turn, <code>lookup_docs</code> after that — exact-match
+            never fires. The loop is <strong>unbounded</strong>: it runs until a rate limit, a
+            billing cap, or a timeout you set somewhere else entirely.
+          </p>
+          <p className="section-body">
+            Killcord embeds the <em>meaning</em> of each call, so rotating tool names doesn't help.
+          </p>
 
-      {/* ── How it Works ────────────────────────────────── */}
-      <section id="how-it-works" className="how">
-        <p className="section-label">Architecture</p>
-        <h2 className="section-title">
-          Invisible Push vs. LLM Pull
-        </h2>
-        <p className="section-sub">
-          Every other tool-routing system asks the LLM to figure out which tools to use.
-          Killcord does it locally — before the tokens hit the wire.
-        </p>
-
-        <div className="comparison">
-          <div className="approach approach-bad">
-            <div className="approach-header">
-              <span className="approach-icon">❌</span>
-              <span>LLM Pull <span className="tag-bad">today</span></span>
+          <div className="comparison-table">
+            <div className="ct-header">
+              <span>Scenario</span>
+              <span>exact-match</span>
+              <span>Killcord</span>
             </div>
-            <p>
-              Your agent ships every MCP tool schema on every request. The LLM reads
-              them all, picks one, and responds. You pay for thousands of prompt tokens
-              that describe tools the LLM will never call.
-            </p>
-            <div className="flow-steps">
-              <div className="flow-step">
-                <span className="step-num">1</span> Agent → API: 50 tool schemas
-              </div>
-              <div className="flow-step strike">
-                <span className="step-num">2</span> LLM reads 47 useless schemas
-              </div>
-              <div className="flow-step strike">
-                <span className="step-num">3</span> ~12 000 wasted input tokens
-              </div>
-              <div className="flow-step">
-                <span className="step-num">4</span> LLM responds — finally
-              </div>
+            <div className="ct-row">
+              <span className="ct-scenario">
+                Same tool name, rephrased query × 5
+              </span>
+              <span className="ct-bad">trips at #6</span>
+              <span className="ct-good">trips at #4</span>
+            </div>
+            <div className="ct-row">
+              <span className="ct-scenario">
+                10 rotating names, same query intent × 40 turns
+              </span>
+              <span className="ct-bad">never fires</span>
+              <span className="ct-good">trips at #4</span>
+            </div>
+            <div className="ct-row">
+              <span className="ct-scenario">
+                Pagination list_orders page=1…5
+              </span>
+              <span className="ct-neutral">—</span>
+              <span className="ct-good">no trip</span>
+            </div>
+            <div className="ct-row">
+              <span className="ct-scenario">
+                Batch get_user with distinct IDs
+              </span>
+              <span className="ct-neutral">—</span>
+              <span className="ct-good">no trip</span>
             </div>
           </div>
+        </section>
 
-          <div className="approach approach-good">
-            <div className="approach-header">
-              <span className="approach-icon">✅</span>
-              <span>Invisible Push <span className="tag-good">Killcord</span></span>
+        {/* ── 3. HOW IT WORKS ──────────────────────────────────────────── */}
+        <section className="section" id="how-it-works">
+          <p className="section-label">How it works</p>
+          <h2 className="section-h2">Three checks. Cheapest first.</h2>
+
+          <ol className="checks-list">
+            <li>
+              <div className="check-num">1</div>
+              <div>
+                <strong>Exact-match</strong> — counts identical tool names per request in O(n).
+                Trips at <code>CB_TOOL_REPEAT_LIMIT</code> (default 5). No model required.
+              </div>
+            </li>
+            <li>
+              <div className="check-num">2</div>
+              <div>
+                <strong>Semantic</strong> — embeds the natural-language content of each call
+                (whitespace strings ≥ 8 chars, or ≥ 25 chars). Compares cosine similarity
+                within a sliding window. Trips when ≥ 3 of the last 5 calls exceed 0.94.
+                ~2–3 ms per request at steady state; tool name is intentionally excluded
+                from the embed string so rotation doesn't help.
+              </div>
+            </li>
+            <li>
+              <div className="check-num">3</div>
+              <div>
+                <strong>Cross-request</strong> (optional, requires Redis) — sliding-window
+                counters for request floods across calls from the same session key.
+              </div>
+            </li>
+          </ol>
+
+          <p className="section-body">When the semantic breaker trips, your agent gets:</p>
+          <div className="code-block">
+            <CopyButton text={`{
+  "error": "circuit_breaker_tripped",
+  "reason": "semantic_loop",
+  "mechanism": "semantic",
+  "similarity": 0.969,
+  "detail": "Tool call #4 is 96.9% semantically similar to 3 of the previous 3 calls.",
+  "retry_after": 60
+}`} />
+            <pre>{`{
+  "error": "circuit_breaker_tripped",
+  "reason": "semantic_loop",
+  "mechanism": "semantic",
+  "similarity": 0.969,
+  "detail": "Tool call #4 is 96.9% semantically similar to 3 of the previous 3 calls.",
+  "retry_after": 60
+}`}</pre>
+          </div>
+          <p className="section-body muted">
+            A structured reason your agent can act on: log it, escalate to a human, or change
+            strategy. Not a silent token burn followed by a vague context error.
+          </p>
+        </section>
+
+        {/* ── 4. RUNS ON YOUR MACHINE ──────────────────────────────────── */}
+        <section className="section section-highlight" id="privacy">
+          <p className="section-label">Privacy and data handling</p>
+          <h2 className="section-h2">Runs on your machine. Nothing leaves.</h2>
+          <p className="section-body">
+            Killcord is a local proxy. It sits between your agent and the LLM API on your own
+            infrastructure. Your prompts, API keys, tool schemas, and traces are never transmitted
+            anywhere except the upstream API you configure.
+          </p>
+
+          <div className="privacy-grid">
+            <div className="privacy-item">
+              <span className="privacy-dot privacy-dot--green" />
+              <div>
+                <strong>Model runs locally</strong><br />
+                MiniLM-L6-v2 (~90 MB) downloads once from HuggingFace on first run, then runs
+                entirely on your CPU via ONNX Runtime. Zero per-request network calls for
+                embeddings. Works offline after that initial download.
+              </div>
             </div>
-            <p>
-              Killcord sits between your agent and the API. It embeds the user prompt
-              locally, cosine-searches against all tool descriptions in microseconds,
-              and rewrites the payload to include only the top 2 matches.
-            </p>
-            <div className="flow-steps">
-              <div className="flow-step">
-                <span className="step-num">1</span> Agent → Killcord: 50 tool schemas
+            <div className="privacy-item">
+              <span className="privacy-dot privacy-dot--green" />
+              <div>
+                <strong>One upstream connection only</strong><br />
+                The only outbound TCP connection is to the LLM API you point it at
+                (<code>ANTHROPIC_UPSTREAM</code> / <code>OPENAI_UPSTREAM</code>). No telemetry,
+                no analytics, no callbacks to any Killcord-controlled server.
               </div>
-              <div className="flow-step highlight">
-                <span className="step-num">2</span> Local MiniLM: filter to top 2
+            </div>
+            <div className="privacy-item">
+              <span className="privacy-dot privacy-dot--green" />
+              <div>
+                <strong>Optional extras stay optional</strong><br />
+                Redis (cross-request rate limiting) and Stripe (billing) are only contacted if you
+                set <code>REDIS_URL</code> or <code>STRIPE_SECRET_KEY</code>. Neither is required
+                for the core loop detection to work.
               </div>
-              <div className="flow-step highlight">
-                <span className="step-num">3</span> Killcord → API: 2 tool schemas
-              </div>
-              <div className="flow-step highlight">
-                <span className="step-num">4</span> LLM responds — faster, cheaper
+            </div>
+            <div className="privacy-item">
+              <span className="privacy-dot privacy-dot--green" />
+              <div>
+                <strong>Verifiable</strong><br />
+                Run <code>node scripts/verify-no-telemetry.mjs</code> to confirm no unexpected
+                outbound connections. The script starts the proxy against a mock upstream, fires
+                real requests, and asserts the only host contacted is the mock.
               </div>
             </div>
           </div>
-        </div>
-      </section>
 
-      {/* ── Features ────────────────────────────────────── */}
-      <section id="features" className="features">
-        <p className="section-label">Features</p>
-        <h2 className="section-title">Built for the agent era</h2>
+          <p className="section-body muted">
+            Every competitor in this space is hosted — you route your API keys through their
+            servers. Killcord you run yourself and can audit line by line.
+          </p>
+        </section>
 
-        <div className="feature-grid">
-          <div className="feature-card">
-            <div className="feature-icon">⚡</div>
-            <h3>Zero-cost embeddings</h3>
-            <p>
-              MiniLM-L6 runs entirely on your CPU via ONNX Runtime. No embedding API,
-              no network round-trip, no extra bill. Cold-start is a one-time ~90 MB download.
-            </p>
-          </div>
-          <div className="feature-card">
-            <div className="feature-icon">🔍</div>
-            <h3>Semantic tool routing</h3>
-            <p>
-              Cosine similarity between the user prompt and each tool description.
-              Works across domains without training or configuration — just plug it in.
-            </p>
-          </div>
-          <div className="feature-card">
-            <div className="feature-icon">🔌</div>
-            <h3>Drop-in replacement</h3>
-            <p>
-              Change one URL in your client config. Supports Anthropic{' '}
-              <code>/v1/messages</code> and OpenAI <code>/v1/chat/completions</code>{' '}
-              — streaming included.
-            </p>
-          </div>
-          <div className="feature-card">
-            <div className="feature-icon">🛡️</div>
-            <h3>Stays local</h3>
-            <p>
-              Your prompts and tool schemas never leave your machine for routing
-              decisions. Killcord only forwards the final, filtered request to the
-              upstream API you configure.
-            </p>
-          </div>
-        </div>
-      </section>
+        {/* ── 5. QUICKSTART ────────────────────────────────────────────── */}
+        <section className="section" id="quickstart">
+          <p className="section-label">Quick start</p>
+          <h2 className="section-h2">One URL change. No other modifications.</h2>
 
-      {/* ── Quick Start ──────────────────────────────────── */}
-      <section id="quickstart" className="quickstart">
-        <p className="section-label">Quick start</p>
-        <h2 className="section-title">Up in 60 seconds</h2>
+          <div className="code-block">
+            <pre>{`# Install
+$ npm install -g killcord
 
-        <div className="code-block">
-          <div><span className="comment"># 1. Install globally</span></div>
-          <div><span className="dollar">$</span><span className="cmd">npm install -g killcord</span></div>
-          <br />
-          <div><span className="comment"># 2. Start the proxy (model downloads on first run)</span></div>
-          <div><span className="dollar">$</span><span className="cmd">killcord</span></div>
-          <br />
-          <div><span className="comment"># 3. Point your client here instead of the real API</span></div>
-          <div>
-            <span className="env-var">ANTHROPIC_BASE_URL</span>
-            <span className="cmd">=</span>
-            <span className="value">http://localhost:8080</span>
+# Start (downloads ~90 MB model on first run, then cached)
+$ killcord
+  Listening on http://localhost:8080
+  Anthropic  →  https://api.anthropic.com
+  OpenAI     →  https://api.openai.com`}</pre>
           </div>
-          <div>
-            <span className="comment"># or for OpenAI-compatible clients:</span>
-          </div>
-          <div>
-            <span className="env-var">OPENAI_BASE_URL</span>
-            <span className="cmd">=</span>
-            <span className="value">http://localhost:8080</span>
-          </div>
-          <br />
-          <div><span className="comment"># Override the upstream target if needed</span></div>
-          <div>
-            <span className="env-var">ANTHROPIC_UPSTREAM</span>
-            <span className="cmd">=https://api.anthropic.com</span>
-            <span className="cmd"> killcord</span>
-          </div>
-        </div>
-      </section>
 
-      {/* ── Pricing ─────────────────────────────────────── */}
-      <PricingSection billingEnabled={billingEnabled} />
+          <p className="section-body">Point your existing framework at the proxy:</p>
 
-      {/* ── Footer ──────────────────────────────────────── */}
-      <footer className="footer">
+          <div className="snippet-grid">
+            {FRAMEWORK_SNIPPETS.map(s => (
+              <div key={s.label} className="snippet-card">
+                <div className="snippet-header">
+                  <span className="snippet-label">{s.label}</span>
+                  <CopyButton text={s.code} />
+                </div>
+                <pre className="snippet-code">{s.code}</pre>
+              </div>
+            ))}
+          </div>
+
+          <p className="section-body">
+            Or override the upstream if needed:
+          </p>
+          <div className="code-block">
+            <pre>{`ANTHROPIC_UPSTREAM=https://api.anthropic.com killcord
+OPENAI_UPSTREAM=https://api.openai.com     killcord`}</pre>
+          </div>
+        </section>
+
+        {/* ── 6. LICENSING ─────────────────────────────────────────────── */}
+        <section className="section" id="licensing">
+          <p className="section-label">Licensing</p>
+          <h2 className="section-h2">Free for personal and evaluation use.</h2>
+          <p className="section-body">
+            Killcord 0.1.x is MIT-licensed and always will be. Starting from 0.2.0, new versions
+            ship under the Business Source License: free for personal, educational, evaluation,
+            and non-production use. A commercial license is required for production use inside a
+            company.
+          </p>
+          <p className="section-body">
+            See <a href={`${GITHUB_URL}/blob/main/COMMERCIAL.md`} target="_blank" rel="noopener noreferrer" className="text-link">COMMERCIAL.md</a> for the full terms. To discuss a commercial
+            license, open a{' '}
+            <a href={`${GITHUB_URL}/issues/new?title=Commercial+license+enquiry`} target="_blank" rel="noopener noreferrer" className="text-link">GitHub issue</a>.
+          </p>
+          <div className="license-pills">
+            <span className="pill pill--green">MIT — 0.1.x (current)</span>
+            <span className="pill pill--blue">BSL — 0.2.0+ (upcoming)</span>
+          </div>
+        </section>
+
+      </main>
+
+      {/* ── Footer ────────────────────────────────────────────────────── */}
+      <footer className="site-footer">
         <div className="footer-inner">
-          {/* Brand column */}
-          <div className="footer-brand">
-            <span className="logo footer-logo">⟁ Killcord</span>
-            <p className="footer-tagline">
-              Local semantic gateway for AI agents.<br />
-              Cut tool-schema token costs by up to 92%.
-            </p>
-            <p className="footer-copy">
-              © 2026 Killcord. All rights reserved.
-            </p>
-            <a className="footer-email" href="https://github.com/landonelder2410/killcord/issues">
-              GitHub Issues
-            </a>
-          </div>
-
-          {/* Link columns */}
-          <div className="footer-links-grid">
-            <div className="footer-col">
-              <p className="footer-col-heading">Product</p>
-              <a href="#how-it-works">How it works</a>
-              <a href="#features">Features</a>
-              <a href="#quickstart">Quick start</a>
-              <a href="#pricing">Pricing</a>
-              <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">GitHub</a>
-              <a href={`${GITHUB_URL}/issues`} target="_blank" rel="noopener noreferrer">Issues</a>
-            </div>
-            <div className="footer-col">
-              <p className="footer-col-heading">Legal &amp; Docs</p>
-              <a href={`${GITHUB_URL}/blob/main/PRIVACY.md`} target="_blank" rel="noopener noreferrer">Privacy Policy</a>
-              <a href={`${GITHUB_URL}/blob/main/TERMS.md`} target="_blank" rel="noopener noreferrer">Terms of Service</a>
-              <a href={`${GITHUB_URL}/blob/main/API.md`} target="_blank" rel="noopener noreferrer">API Reference</a>
-            </div>
-          </div>
+          <span className="logo">killcord</span>
+          <span className="footer-meta">
+            MIT 0.1.x ·{' '}
+            <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">GitHub</a>
+            {' '}·{' '}
+            <a href={NPM_URL} target="_blank" rel="noopener noreferrer">npm</a>
+            {' '}·{' '}
+            <a href={`${GITHUB_URL}/blob/main/COMMERCIAL.md`} target="_blank" rel="noopener noreferrer">Commercial</a>
+          </span>
         </div>
       </footer>
     </>

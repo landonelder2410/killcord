@@ -150,6 +150,25 @@ The right fix for limitations #3 and #5 is comparing tool *results*, not just ca
 
 This would require Killcord to intercept and buffer `tool_result` / `role: tool` messages and correlate them with the preceding calls — which the proxy architecture supports. It's the planned follow-on to the current NL-content approach. Cross-request semantic detection (limitation #8) becomes tractable at the same time: the Redis layer already tracks sessions; adding a small rolling embedding store per session-key unlocks it.
 
+## Privacy and data handling
+
+Killcord runs entirely on your machine as a local proxy.
+
+- **Your prompts, API keys, tool schemas, and tool results are never sent to any Killcord-controlled server.** The only outbound connection Killcord makes is to the upstream LLM API you configure (`ANTHROPIC_UPSTREAM` / `OPENAI_UPSTREAM`).
+- **Semantic loop detection is fully local.** The MiniLM-L6-v2 model (~90 MB) is downloaded once from HuggingFace on first run and then cached at `~/.cache/Xenova/`. Every subsequent run — and every embedding computed during request handling — uses only the local cached model. No network call is made per-request.
+- **Redis is entirely optional.** If `REDIS_URL` is not set, cross-request state is stored in memory only.
+- **Stripe is never contacted** unless you set `STRIPE_SECRET_KEY` explicitly.
+- **There is no telemetry, analytics, or phone-home of any kind.**
+
+You can verify this independently by running the included egress test:
+
+```bash
+npm run build
+node scripts/verify-no-telemetry.mjs
+```
+
+The script starts a mock upstream, fires real requests through the proxy (including a semantic loop trip that exercises the embedder), and then asserts via `lsof` that the proxy process opened no TCP connections to non-loopback addresses on ports 80 or 443.
+
 ## Contributing
 
 Open an issue or pull request at https://github.com/landonelder2410/killcord/issues. This is early-stage software. The semantic threshold (0.94) and NL-extraction heuristic are the most likely areas needing calibration for different agent patterns. If you have a real-world loop sequence that this misses or a false-positive case it catches incorrectly, open an issue with the raw tool call sequence and we will add it to the measurement harness.
