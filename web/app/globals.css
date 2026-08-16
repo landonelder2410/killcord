@@ -1,39 +1,42 @@
 /* ── Design tokens ──────────────────────────────────────────────────────────
-   Light theme. Red (#e5484d) is reserved for danger signals only — the
-   TRIPPED indicator and trip-row highlight. The logo and all UI chrome
-   use near-black or gray.
+   Dark theme. ONE accent: amber (#f5a623).
+   Amber used only for: wordmark, TRIPPED indicators, ct-bad/ct-good cells.
+   Everything else is grayscale.
+
+   WCAG AA contrast on #0d0d0d background:
+     #e8e8e8  15.6:1  primary body       ✓
+     #a3a3a3   7.4:1  secondary prose    ✓
+     #8a8a8a   5.1:1  captions/meta      ✓ (≥4.5 required)
 
    Type scale — 5 sizes:
-     s1  0.75rem   labels, pills, copy buttons, terminal meta
-     s2  0.875rem  code blocks, table content, checks body, secondary prose
+     s1  0.75rem   labels, pills, copy buttons
+     s2  0.875rem  code, table, secondary prose
      s3  1rem      body (default)
      s4  1.375rem  section h2
-     s5  2rem      hero h1
+     s5  2rem→2.5  hero h1 (2rem mobile, 2.5 desktop)
 
-   Spacing rhythm: multiples of 8px.
+   Spacing: multiples of 8px throughout.
    ────────────────────────────────────────────────────────────────────────── */
 :root {
-  --bg:      #ffffff;
-  --bg-sub:  #f9fafb;
-  --border:  #e5e7eb;
-  --text:    #111827;
-  --text-2:  #374151;
-  --text-3:  #6b7280;
-  --red:     #e5484d;   /* danger only — not used for logo/chrome */
-  --green:   #166534;
+  --bg:      #0d0d0d;
+  --bg-sub:  #181818;   /* privacy section, card surfaces */
+  --bg-code: #1e1e1e;   /* code blocks */
+  --border:  #262626;
+  --border-2:#363636;
+  --text:    #e8e8e8;   /* primary — 15.6:1 ✓ */
+  --text-2:  #a3a3a3;   /* secondary — 7.4:1 ✓ */
+  --text-3:  #8a8a8a;   /* captions/meta — 5.1:1 ✓ */
+  --amber:   #f5a623;   /* ONE accent — nothing else uses color */
   --max-w:   720px;
   --px:      20px;
   --mono:    'JetBrains Mono', 'Cascadia Code', ui-monospace, monospace;
 
-  /* Terminal surface (dark-on-light is intentional and reads as a device) */
-  --term-bg:    #18181b;
-  --term-bar:   #27272a;
-  --term-text:  #a1a1aa;
-  --term-hi:    #f4f4f5;
-  --term-dim:   #52525b;
-  --term-green: #4ade80;
-  --term-red:   #f87171;
-  --term-cyan:  #67e8f9;
+  /* Terminal surface — lighter than page to read as a device */
+  --term-bg:  #1a1a1a;
+  --term-bar: #222222;
+  --term-txt: #a3a3a3;
+  --term-hi:  #e8e8e8;
+  --term-dim: #525252;
 }
 
 @media (min-width: 640px) { :root { --px: 32px; } }
@@ -57,10 +60,11 @@ a { color: inherit; text-decoration: none; }
 code {
   font-family: var(--mono);
   font-size: 0.875em;
-  background: #f3f4f6;
-  border: 1px solid var(--border);
+  background: var(--bg-code);
+  border: 1px solid var(--border-2);
   border-radius: 3px;
   padding: 1px 5px;
+  color: var(--text-2);
 }
 
 /* ── Header ─────────────────────────────────────────────────────────────── */
@@ -68,7 +72,7 @@ code {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(13, 13, 13, 0.92);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border);
 }
@@ -86,7 +90,7 @@ code {
   font-family: var(--mono);
   font-size: 0.875rem;   /* s2 */
   font-weight: 700;
-  color: var(--text);    /* near-black — not red */
+  color: var(--amber);   /* accent: wordmark */
   letter-spacing: -0.02em;
 }
 .header-links {
@@ -107,7 +111,7 @@ code {
   color: var(--bg) !important;
   transition: opacity 0.12s !important;
 }
-.header-cta:hover { opacity: 0.82 !important; }
+.header-cta:hover { opacity: 0.85 !important; }
 
 /* ── Main column ─────────────────────────────────────────────────────────── */
 .main-col {
@@ -117,7 +121,7 @@ code {
 }
 
 /* ── Hero ────────────────────────────────────────────────────────────────── */
-/* Tight on mobile so install cmd is visible without scrolling at 375×812 */
+/* Tight on mobile — install command visible at 375×812 without scrolling */
 .hero {
   padding: 40px 0 24px;
 }
@@ -127,15 +131,15 @@ code {
 
 .hero-h1 {
   font-family: var(--mono);
-  font-size: 2rem;       /* s5 */
+  font-size: 2rem;       /* s5-mobile */
   font-weight: 700;
   letter-spacing: -0.04em;
   line-height: 1;
-  color: var(--text);    /* near-black */
+  color: var(--amber);   /* accent: wordmark */
   margin-bottom: 12px;
 }
 @media (min-width: 640px) {
-  .hero-h1 { font-size: 2.5rem; }
+  .hero-h1 { font-size: 2.5rem; } /* s5-desktop */
 }
 
 .hero-sub {
@@ -146,12 +150,12 @@ code {
   margin-bottom: 24px;
 }
 
-/* Install command — the visual anchor of the hero */
+/* Install command — visual anchor */
 .install-wrap {
   display: inline-flex;
   align-items: stretch;
-  background: #f3f4f6;
-  border: 1px solid var(--border);
+  background: var(--bg-code);
+  border: 1px solid var(--border-2);
   border-radius: 6px;
   overflow: hidden;
   margin-bottom: 24px;
@@ -159,7 +163,7 @@ code {
 }
 .install-cmd {
   font-family: var(--mono);
-  font-size: 1rem;       /* s3 — same as body, which makes it feel important */
+  font-size: 1rem;       /* s3 */
   padding: 12px 16px;
   color: var(--text);
   overflow-x: auto;
@@ -174,7 +178,7 @@ code {
 .copy-btn {
   background: none;
   border: none;
-  border-left: 1px solid var(--border);
+  border-left: 1px solid var(--border-2);
   color: var(--text-3);
   font-size: 0.75rem;    /* s1 */
   font-family: var(--mono);
@@ -186,8 +190,8 @@ code {
   transition: color 0.12s, background 0.12s;
   min-width: 52px;
 }
-.copy-btn:hover  { color: var(--text); background: #e5e7eb; }
-.copy-btn.copied { color: var(--green); }
+.copy-btn:hover  { color: var(--text); background: var(--border); }
+.copy-btn.copied { color: var(--amber); }
 
 .hero-links {
   display: flex;
@@ -205,21 +209,22 @@ code {
   white-space: nowrap;
 }
 .btn-ghost {
-  border: 1px solid var(--border);
-  color: var(--text-2);
+  border: 1px solid var(--border-2);
+  color: var(--text-3);
   background: transparent;
 }
-.btn-ghost:hover { border-color: var(--text-3); color: var(--text); background: var(--bg-sub); }
+.btn-ghost:hover { border-color: var(--text-3); color: var(--text); }
 
 /* ── Terminal demo ───────────────────────────────────────────────────────── */
-/* Standalone block between hero and first section — no border-top */
+/* Standalone between hero and first section.
+   Lighter surface (#1a1a1a) on dark page (#0d0d0d) — reads as a device. */
 .demo-wrap {
-  margin: 0 0 0;
   border-top: 1px solid var(--border);
   padding-top: 32px;
 }
 .demo-terminal {
   background: var(--term-bg);
+  border: 1px solid var(--border-2);
   border-radius: 8px;
   overflow: hidden;
   font-family: var(--mono);
@@ -231,24 +236,11 @@ code {
   display: flex;
   align-items: center;
   gap: 10px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid var(--border);
 }
-.demo-dots {
-  display: flex;
-  gap: 6px;
-  flex-shrink: 0;
-}
-.demo-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #3f3f46;
-}
-.demo-title {
-  color: var(--term-dim);
-  font-size: 0.75rem;    /* s1 */
-  font-weight: 500;
-}
+.demo-dots { display: flex; gap: 6px; flex-shrink: 0; }
+.demo-dot  { width: 10px; height: 10px; border-radius: 50%; background: var(--border-2); }
+.demo-title { color: var(--term-dim); font-size: 0.75rem; font-weight: 500; }
 .demo-body {
   padding: 16px 20px;
   overflow-x: auto;
@@ -257,17 +249,18 @@ code {
 .demo-pre {
   white-space: pre;
   line-height: 1.75;
-  color: var(--term-text);
+  color: var(--term-txt);
 }
-/* Semantic color classes within .demo-pre */
+
+/* Terminal syntax classes — all grayscale except t-trip (amber) */
 .t-dim   { color: var(--term-dim); }
 .t-hi    { color: var(--term-hi); }
-.t-tool  { color: var(--term-cyan); }
-.t-ok    { color: var(--term-green); font-weight: 600; }
-.t-trip  { color: var(--term-red);   font-weight: 700; }
-.t-key   { color: var(--term-cyan); }
-.t-str   { color: #fbbf24; }  /* amber for JSON strings */
-.t-num   { color: #c084fc; }  /* purple for numbers */
+.t-tool  { color: var(--term-hi); }      /* tool names */
+.t-ok    { color: var(--text-3); }       /* muted — absence of a problem */
+.t-trip  { color: var(--amber); font-weight: 700; } /* accent */
+.t-key   { color: var(--text-2); }
+.t-str   { color: var(--text-2); }
+.t-num   { color: var(--text); }
 
 /* ── Sections ────────────────────────────────────────────────────────────── */
 .section {
@@ -313,21 +306,21 @@ code {
   line-height: 1.75;
 }
 .section-body:last-child { margin-bottom: 0; }
-.section-body.muted { color: var(--text-3); font-size: 0.875rem; } /* s2 */
+.section-body.muted { color: var(--text-3); font-size: 0.875rem; }
 .section-body strong { color: var(--text); }
 .section-body em { color: var(--text); font-style: normal; font-weight: 500; }
 .text-link {
-  color: var(--text);
+  color: var(--text-2);
   text-decoration: underline;
   text-underline-offset: 2px;
-  text-decoration-color: var(--border);
-  transition: text-decoration-color 0.12s;
+  text-decoration-color: var(--border-2);
+  transition: color 0.12s, text-decoration-color 0.12s;
 }
-.text-link:hover { text-decoration-color: var(--text-3); }
+.text-link:hover { color: var(--text); text-decoration-color: var(--text-3); }
 
 /* ── Comparison table ────────────────────────────────────────────────────── */
 .comparison-table {
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-2);
   border-radius: 6px;
   overflow: hidden;
   margin-bottom: 32px;
@@ -338,8 +331,8 @@ code {
   grid-template-columns: 1fr auto auto;
   gap: 16px;
   padding: 10px 16px;
-  background: #f3f4f6;
-  border-bottom: 1px solid var(--border);
+  background: var(--bg-sub);
+  border-bottom: 1px solid var(--border-2);
   font-family: var(--mono);
   font-size: 0.75rem;    /* s1 */
   font-weight: 700;
@@ -357,8 +350,9 @@ code {
 }
 .ct-row:last-child { border-bottom: none; }
 .ct-scenario { color: var(--text-2); }
-.ct-good    { color: var(--green); font-family: var(--mono); font-size: 0.75rem; white-space: nowrap; text-align: center; font-weight: 600; }
-.ct-bad     { color: var(--red);   font-family: var(--mono); font-size: 0.75rem; white-space: nowrap; text-align: center; font-weight: 600; }
+/* Both notable outcomes use amber — draws the eye to the key contrast */
+.ct-good    { color: var(--amber); font-family: var(--mono); font-size: 0.75rem; white-space: nowrap; text-align: center; font-weight: 600; }
+.ct-bad     { color: var(--amber); font-family: var(--mono); font-size: 0.75rem; white-space: nowrap; text-align: center; font-weight: 600; }
 .ct-neutral { color: var(--text-3); font-family: var(--mono); font-size: 0.75rem; white-space: nowrap; text-align: center; }
 
 /* ── Checks list ─────────────────────────────────────────────────────────── */
@@ -369,17 +363,13 @@ code {
   gap: 20px;
   margin-bottom: 24px;
 }
-.checks-list li {
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
-}
+.checks-list li { display: flex; gap: 14px; align-items: flex-start; }
 .check-num {
   font-family: var(--mono);
   font-size: 0.75rem;    /* s1 */
   font-weight: 700;
   color: var(--bg);
-  background: var(--text);
+  background: var(--text-3);
   border-radius: 50%;
   width: 20px;
   height: 20px;
@@ -398,8 +388,8 @@ code {
 
 /* ── Code block ──────────────────────────────────────────────────────────── */
 .code-block {
-  background: #f9fafb;
-  border: 1px solid var(--border);
+  background: var(--bg-code);
+  border: 1px solid var(--border-2);
   border-radius: 6px;
   overflow: hidden;
   margin-bottom: 20px;
@@ -410,12 +400,13 @@ code {
   top: 0;
   right: 0;
   border: none;
-  border-left: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
+  border-left: 1px solid var(--border-2);
+  border-bottom: 1px solid var(--border-2);
   border-radius: 0 6px 0 4px;
   padding: 6px 12px;
   height: auto;
   align-self: auto;
+  background: var(--bg-code);
 }
 .code-block pre {
   font-family: var(--mono);
@@ -445,13 +436,14 @@ code {
 }
 .privacy-item strong { color: var(--text); display: block; margin-bottom: 2px; }
 .privacy-dot {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   flex-shrink: 0;
-  margin-top: 7px;
+  margin-top: 8px;
+  background: var(--text-3);
 }
-.privacy-dot--green { background: var(--green); }
+.privacy-dot--green { background: var(--text-3); }
 
 /* ── Snippet grid ────────────────────────────────────────────────────────── */
 .snippet-grid {
@@ -464,8 +456,8 @@ code {
   .snippet-grid { grid-template-columns: repeat(2, 1fr); }
 }
 .snippet-card {
-  background: var(--bg-sub);
-  border: 1px solid var(--border);
+  background: var(--bg-code);
+  border: 1px solid var(--border-2);
   border-radius: 6px;
   overflow: hidden;
 }
@@ -474,8 +466,8 @@ code {
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
-  border-bottom: 1px solid var(--border);
-  background: #f3f4f6;
+  border-bottom: 1px solid var(--border-2);
+  background: var(--bg-sub);
 }
 .snippet-label {
   font-family: var(--mono);
@@ -497,7 +489,7 @@ code {
 }
 .snippet-card .copy-btn {
   border: none;
-  border-left: 1px solid var(--border);
+  border-left: 1px solid var(--border-2);
   border-radius: 3px;
   align-self: auto;
   height: 24px;
@@ -517,16 +509,15 @@ code {
   font-weight: 600;
   padding: 4px 12px;
   border-radius: 100px;
-  border: 1px solid;
+  border: 1px solid var(--border-2);
+  color: var(--text-3);
+  background: var(--bg-code);
 }
-.pill--green { color: var(--green); border-color: rgba(22,101,52,0.25); background: rgba(22,101,52,0.06); }
-.pill--blue  { color: var(--text-2); border-color: var(--border); background: var(--bg-sub); }
+.pill--green { color: var(--text-2); }
+.pill--blue  { color: var(--text-3); }
 
 /* ── Footer ──────────────────────────────────────────────────────────────── */
-.site-footer {
-  border-top: 1px solid var(--border);
-  margin-top: 0;
-}
+.site-footer { border-top: 1px solid var(--border); }
 .footer-inner {
   max-width: calc(var(--max-w) + var(--px) * 2);
   margin: 0 auto;
@@ -542,6 +533,10 @@ code {
   align-items: center;
   gap: 16px;
 }
+.footer-copy {
+  font-size: 0.75rem;    /* s1 */
+  color: var(--text-3);
+}
 .footer-meta {
   font-size: 0.875rem;   /* s2 */
   color: var(--text-3);
@@ -552,7 +547,3 @@ code {
 }
 .footer-meta a { transition: color 0.12s; }
 .footer-meta a:hover { color: var(--text-2); }
-.footer-copy {
-  font-size: 0.75rem;    /* s1 */
-  color: var(--text-3);
-}
