@@ -38,7 +38,14 @@ function baseUrl(req: NextRequest): string {
 // ── Route handler ──────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  const body      = await req.json() as { tier?: string; addon?: string };
+  if (process.env.KILLCORD_BILLING_ENABLED !== 'true') {
+    return NextResponse.json(
+      { error: 'billing_disabled', message: 'Billing is not enabled on this instance.' },
+      { status: 503 },
+    );
+  }
+
+  const body = await req.json() as { tier?: string; addon?: string };
   const origin    = baseUrl(req);
   const successUrl = `${origin}/success/?session_id={CHECKOUT_SESSION_ID}`;
   const cancelUrl  = `${origin}/#pricing`;
@@ -53,7 +60,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         {
           message:
             `The "${addonKey}" add-on isn't live yet — ` +
-            'email support@killcord.dev to be notified on launch.',
+            'open an issue at https://github.com/OWNER/killcord/issues to be notified on launch.',
         },
         { status: 503 },
       );

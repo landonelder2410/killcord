@@ -11,6 +11,7 @@ import type {
 } from './types';
 import { redactPII }                                          from './pii';
 import { record, estimateTokens }                            from './logger';
+import { writeTrace }                                        from './trace';
 import {
   scanHistoryForLoop,
   checkCrossRequestLimits,
@@ -19,7 +20,7 @@ import {
   type CircuitBreakerResult,
   type CBOptions,
 }                                                            from './circuit-breaker';
-import { classifyRequest, shouldAutoRoute }                  from './complexity-router';
+import { classifyRequest }                                   from './complexity-router';
 
 // Persistent keep-alive agent for all upstream LLM API connections — reuses TLS
 // sessions and TCP sockets across sequential fetch() calls, cutting per-request
@@ -167,13 +168,6 @@ const HOP_BY_HOP = new Set([
   'te', 'trailers', 'transfer-encoding', 'upgrade', 'content-encoding',
 ]);
 
-// ── Local-engine routing ───────────────────────────────────────────────────
-// Requests for these model names bypass cloud APIs entirely and are forwarded
-// to the local inference engine. Semantic filtering is skipped — no per-token
-// cloud billing means there is nothing to optimise.
-const LOCAL_MODELS     = new Set(['local-killcord', 'llama-cpp']);
-const LOCAL_ENGINE_URL = process.env.LOCAL_ENGINE_URL ?? 'http://127.0.0.1:8081';
-
 // ── Retry constants ────────────────────────────────────────────────────────
 const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
 const MAX_RETRIES      = 2;    // 3 total attempts before surfacing the error
@@ -186,7 +180,7 @@ async function proxyRequest(
   req: Request,
   body: unknown,
   res: Response,
-): Promise<void> {
+): Promise<{ status: number }> {
   const serialized = JSON.stringify(body);
 
   // undici v8+ computes content-length from the body itself and throws
@@ -223,7 +217,7 @@ async function proxyRequest(
         error:  timedOut ? 'upstream_timeout' : 'upstream_unreachable',
         detail: String(err),
       });
-      return;
+      return { status: timedOut ? 504 : 502 };
     }
 
     // Non-retryable status or last attempt — proceed with this response.
@@ -234,7 +228,7 @@ async function proxyRequest(
     upstream = null;
   }
 
-  if (!upstream) return; // unreachable guard; narrows type for the lines below
+  if (!upstream) return { status: 0 }; // unreachable guard; narrows type for the lines below
 
   res.status(upstream.status);
   upstream.headers.forEach((value, key) => {
@@ -242,7 +236,7 @@ async function proxyRequest(
     res.setHeader(key, value);
   });
 
-  if (!upstream.body) { res.end(); return; }
+  if (!upstream.body) { res.end(); return { status: upstream.status }; }
 
   // Iterative read — no stack growth on arbitrarily long streaming responses
   const reader = upstream.body.getReader();
@@ -252,6 +246,7 @@ async function proxyRequest(
     res.write(value);
   }
   res.end();
+  return { status: upstream.status };
 }
 
 // ── Middleware ─────────────────────────────────────────────────────────────
@@ -261,7 +256,8 @@ export function anthropicFilterMiddleware(upstreamBase: string) {
     // ── TRACE ID ────────────────────────────────────────────────────────────
     // Generated once per request. Injected into the response header so
     // enterprise engineers can correlate proxy logs with upstream API traces.
-    const traceId = randomUUID();
+    const traceId  = randomUUID();
+    const startMs  = Date.now();
     res.setHeader('X-Killcord-Trace-Id', traceId);
 
     const body = req.body as AnthropicRequest;
@@ -270,7 +266,7 @@ export function anthropicFilterMiddleware(upstreamBase: string) {
     // restore them and forward the unmodified payload.
     const originalTools = Array.isArray(body.tools) ? [...body.tools] : body.tools;
 
-    const toolsReceived  = Array.isArray(body.tools) ? body.tools.length : 0;
+    const toolsOffered  = Array.isArray(body.tools) ? body.tools.map(t => t.name) : [];
     const tokensReceived = estimateTokens(body.tools ?? []);
 
     try {
@@ -278,7 +274,10 @@ export function anthropicFilterMiddleware(upstreamBase: string) {
       // If the body lacks the expected Anthropic shape, skip all processing
       // and forward as-is — unknown payload formats are never rejected.
       if (!Array.isArray(body.messages)) {
-        await proxyRequest(`${upstreamBase}/v1/messages`, req, body, res);
+        const { status } = await proxyRequest(`${upstreamBase}/v1/messages`, req, body, res);
+        writeTrace({ traceId, timestamp: new Date().toISOString(), model: body.model ?? 'unknown',
+          latencyMs: Date.now() - startMs, upstreamStatus: status, toolsOffered, toolsForwarded: toolsOffered,
+          tokensIn: tokensReceived, tokensOut: 0, steps: [], circuitBreaker: { tripped: false, mechanism: null, reason: null, detail: null } });
         return;
       }
 
@@ -293,6 +292,11 @@ export function anthropicFilterMiddleware(upstreamBase: string) {
         const sessionKey = resolveSessionKey(req.headers as Record<string, string | string[] | undefined>, req.ip ?? 'unknown');
         console.warn(`[killcord/cb] History loop detected. session=${sessionKey} traceId=${traceId} reason=${historyResult.reason} detail=${historyResult.detail}`);
         fireWebhook({ event: 'circuit_breaker_tripped', traceId, sessionKey, ...historyResult, endpoint: '/v1/messages', ts: new Date().toISOString() });
+        writeTrace({ traceId, timestamp: new Date().toISOString(), model: body.model ?? 'unknown',
+          latencyMs: Date.now() - startMs, upstreamStatus: 429, toolsOffered, toolsForwarded: [],
+          tokensIn: tokensReceived, tokensOut: 0,
+          steps: buildStepsFromMessages(body.messages),
+          circuitBreaker: { tripped: true, mechanism: 'exact', reason: historyResult.reason ?? null, detail: historyResult.detail ?? null } });
         res.status(429).json({
           error:       'circuit_breaker_tripped',
           reason:      historyResult.reason,
@@ -308,6 +312,11 @@ export function anthropicFilterMiddleware(upstreamBase: string) {
       if (crossResult.tripped) {
         console.warn(`[killcord/cb] Cross-request limit hit. session=${sessionKey} traceId=${traceId} reason=${crossResult.reason} detail=${crossResult.detail}`);
         fireWebhook({ event: 'circuit_breaker_tripped', traceId, sessionKey, ...crossResult, endpoint: '/v1/messages', ts: new Date().toISOString() });
+        writeTrace({ traceId, timestamp: new Date().toISOString(), model: body.model ?? 'unknown',
+          latencyMs: Date.now() - startMs, upstreamStatus: 429, toolsOffered, toolsForwarded: [],
+          tokensIn: tokensReceived, tokensOut: 0,
+          steps: buildStepsFromMessages(body.messages),
+          circuitBreaker: { tripped: true, mechanism: 'exact', reason: crossResult.reason ?? null, detail: crossResult.detail ?? null } });
         res.status(429).json({
           error:       'circuit_breaker_tripped',
           reason:      crossResult.reason,
@@ -319,7 +328,7 @@ export function anthropicFilterMiddleware(upstreamBase: string) {
 
       // ── COMPLEXITY CLASSIFICATION ────────────────────────────────────────
       const lastUserMsg = extractAnthropicPrompt(body.messages);
-      const complexity  = classifyRequest(lastUserMsg, toolsReceived, body.messages.length);
+      const complexity  = classifyRequest(lastUserMsg, toolsOffered.length, body.messages.length);
       res.setHeader('X-Killcord-Complexity', complexity.complexity);
       res.setHeader('X-Killcord-Complexity-Score', String(complexity.score));
 
@@ -328,59 +337,43 @@ export function anthropicFilterMiddleware(upstreamBase: string) {
       // personal data never leave the internal network.
       redactAnthropicMessages(body.messages);
 
-      // ── AUTO-ROUTE: simple requests → local engine ───────────────────────
-      if (shouldAutoRoute(complexity.complexity) && !LOCAL_MODELS.has(body.model ?? '')) {
-        console.log(`[killcord] Auto-routing simple request to local engine. session=${sessionKey} score=${complexity.score} reasons=${complexity.reasons.join(',')}`);
-        res.on('finish', () =>
-          setImmediate(() =>
-            record({ ts: Date.now(), traceId, model: `local-auto:${body.model ?? 'unknown'}`, toolsReceived, toolsForwarded: toolsReceived, tokensReceived, tokensForwarded: tokensReceived })
-          )
-        );
-        await proxyRequest(`${LOCAL_ENGINE_URL}/v1/messages`, req, body, res);
-        return;
-      }
-
-      // ── LOCAL ENGINE BYPASS ──────────────────────────────────────────────
-      // Air-gapped models skip semantic filtering (no cloud billing to reduce).
-      if (LOCAL_MODELS.has(body.model ?? '')) {
-        res.on('finish', () =>
-          setImmediate(() =>
-            record({
-              ts: Date.now(), traceId,
-              model:          body.model ?? 'unknown',
-              toolsReceived,  toolsForwarded:  toolsReceived,
-              tokensReceived, tokensForwarded: tokensReceived,
-            })
-          )
-        );
-        await proxyRequest(`${LOCAL_ENGINE_URL}/v1/messages`, req, body, res);
-        return;
-      }
-
       // ── SEMANTIC FILTER ──────────────────────────────────────────────────
       if (Array.isArray(body.tools) && body.tools.length > 0) {
         const prompt = extractAnthropicPrompt(body.messages);
         if (prompt) body.tools = await filterTools(prompt, body.tools);
       }
 
-      const toolsForwarded  = Array.isArray(body.tools) ? body.tools.length : 0;
+      const toolsForwarded  = Array.isArray(body.tools) ? body.tools.map(t => t.name) : [];
       const tokensForwarded = estimateTokens(body.tools ?? []);
 
-      // ── ASYNC ROI LOGGING ────────────────────────────────────────────────
+      const { status: upstreamStatus } = await proxyRequest(`${upstreamBase}/v1/messages`, req, body, res);
+
+      // ── ASYNC ROI LOGGING + TRACE WRITE ─────────────────────────────────
       // Fires after the response is flushed (res 'finish') then deferred
       // behind remaining I/O (setImmediate) — zero impact on latency.
       res.on('finish', () =>
-        setImmediate(() =>
+        setImmediate(() => {
           record({
             ts: Date.now(), traceId,
-            model: body.model ?? 'unknown',
-            toolsReceived,  toolsForwarded,
+            model:          body.model ?? 'unknown',
+            toolsReceived:  toolsOffered.length,  toolsForwarded:  toolsForwarded.length,
             tokensReceived, tokensForwarded,
-          })
-        )
+          });
+          writeTrace({
+            traceId,
+            timestamp:      new Date().toISOString(),
+            model:          body.model ?? 'unknown',
+            latencyMs:      Date.now() - startMs,
+            upstreamStatus,
+            toolsOffered,
+            toolsForwarded,
+            tokensIn:       tokensReceived,
+            tokensOut:      tokensForwarded,
+            steps:          buildStepsFromMessages(body.messages),
+            circuitBreaker: { tripped: false, mechanism: null, reason: null, detail: null },
+          });
+        })
       );
-
-      await proxyRequest(`${upstreamBase}/v1/messages`, req, body, res);
 
     } catch (filterErr) {
       // ── FAIL-OPEN CIRCUIT BREAKER ────────────────────────────────────────
@@ -389,9 +382,6 @@ export function anthropicFilterMiddleware(upstreamBase: string) {
       const errMsg = filterErr instanceof Error ? filterErr.message : String(filterErr);
       console.warn('[killcord] Circuit breaker triggered — bypassing filter.', errMsg);
 
-      // ── WEBHOOK ALERT ─────────────────────────────────────────────────────
-      // Silently notify ops via WEBHOOK_URL if configured. The proxy does not
-      // wait for delivery — a slow or unreachable webhook cannot affect latency.
       fireWebhook({
         event:     'circuit_breaker_triggered',
         traceId,
@@ -412,18 +402,22 @@ export function anthropicFilterMiddleware(upstreamBase: string) {
 
 export function openaiFilterMiddleware(upstreamBase: string) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const traceId = randomUUID();
+    const traceId  = randomUUID();
+    const startMs  = Date.now();
     res.setHeader('X-Killcord-Trace-Id', traceId);
 
     const body = req.body as OpenAIRequest;
     const originalTools = Array.isArray(body.tools) ? [...body.tools] : body.tools;
 
-    const toolsReceived  = Array.isArray(body.tools) ? body.tools.length : 0;
-    const tokensReceived = estimateTokens(body.tools ?? []);
+    const toolsOfferedNames = Array.isArray(body.tools) ? body.tools.map(t => t.function.name) : [];
+    const tokensReceived    = estimateTokens(body.tools ?? []);
 
     try {
       if (!Array.isArray(body.messages)) {
-        await proxyRequest(`${upstreamBase}/v1/chat/completions`, req, body, res);
+        const { status } = await proxyRequest(`${upstreamBase}/v1/chat/completions`, req, body, res);
+        writeTrace({ traceId, timestamp: new Date().toISOString(), model: body.model ?? 'unknown',
+          latencyMs: Date.now() - startMs, upstreamStatus: status, toolsOffered: toolsOfferedNames, toolsForwarded: toolsOfferedNames,
+          tokensIn: tokensReceived, tokensOut: 0, steps: [], circuitBreaker: { tripped: false, mechanism: null, reason: null, detail: null } });
         return;
       }
 
@@ -437,6 +431,11 @@ export function openaiFilterMiddleware(upstreamBase: string) {
         const sessionKey = resolveSessionKey(req.headers as Record<string, string | string[] | undefined>, req.ip ?? 'unknown');
         console.warn(`[killcord/cb] History loop detected. session=${sessionKey} traceId=${traceId} reason=${historyResult.reason} detail=${historyResult.detail}`);
         fireWebhook({ event: 'circuit_breaker_tripped', traceId, sessionKey, ...historyResult, endpoint: '/v1/chat/completions', ts: new Date().toISOString() });
+        writeTrace({ traceId, timestamp: new Date().toISOString(), model: body.model ?? 'unknown',
+          latencyMs: Date.now() - startMs, upstreamStatus: 429, toolsOffered: toolsOfferedNames, toolsForwarded: [],
+          tokensIn: tokensReceived, tokensOut: 0,
+          steps: buildStepsFromOAIMessages(body.messages),
+          circuitBreaker: { tripped: true, mechanism: 'exact', reason: historyResult.reason ?? null, detail: historyResult.detail ?? null } });
         res.status(429).json({
           error:       'circuit_breaker_tripped',
           reason:      historyResult.reason,
@@ -452,6 +451,11 @@ export function openaiFilterMiddleware(upstreamBase: string) {
       if (crossResult.tripped) {
         console.warn(`[killcord/cb] Cross-request limit hit. session=${sessionKey} traceId=${traceId} reason=${crossResult.reason} detail=${crossResult.detail}`);
         fireWebhook({ event: 'circuit_breaker_tripped', traceId, sessionKey, ...crossResult, endpoint: '/v1/chat/completions', ts: new Date().toISOString() });
+        writeTrace({ traceId, timestamp: new Date().toISOString(), model: body.model ?? 'unknown',
+          latencyMs: Date.now() - startMs, upstreamStatus: 429, toolsOffered: toolsOfferedNames, toolsForwarded: [],
+          tokensIn: tokensReceived, tokensOut: 0,
+          steps: buildStepsFromOAIMessages(body.messages),
+          circuitBreaker: { tripped: true, mechanism: 'exact', reason: crossResult.reason ?? null, detail: crossResult.detail ?? null } });
         res.status(429).json({
           error:       'circuit_breaker_tripped',
           reason:      crossResult.reason,
@@ -464,67 +468,52 @@ export function openaiFilterMiddleware(upstreamBase: string) {
       // ── COMPLEXITY CLASSIFICATION ────────────────────────────────────────
       const userMsg    = [...body.messages].reverse().find(m => m.role === 'user');
       const prompt     = typeof userMsg?.content === 'string' ? userMsg.content : '';
-      const complexity = classifyRequest(prompt, toolsReceived, body.messages.length);
+      const complexity = classifyRequest(prompt, toolsOfferedNames.length, body.messages.length);
       res.setHeader('X-Killcord-Complexity', complexity.complexity);
       res.setHeader('X-Killcord-Complexity-Score', String(complexity.score));
 
       redactOpenAIMessages(body.messages);
 
-      // ── AUTO-ROUTE: simple requests → local engine ───────────────────────
-      if (shouldAutoRoute(complexity.complexity) && !LOCAL_MODELS.has(body.model ?? '')) {
-        console.log(`[killcord] Auto-routing simple request to local engine. session=${sessionKey} score=${complexity.score}`);
-        res.on('finish', () =>
-          setImmediate(() =>
-            record({ ts: Date.now(), traceId, model: `local-auto:${body.model ?? 'unknown'}`, toolsReceived, toolsForwarded: toolsReceived, tokensReceived, tokensForwarded: tokensReceived })
-          )
-        );
-        await proxyRequest(`${LOCAL_ENGINE_URL}/v1/chat/completions`, req, body, res);
-        return;
-      }
-
-      // ── LOCAL ENGINE BYPASS ──────────────────────────────────────────────
-      if (LOCAL_MODELS.has(body.model ?? '')) {
-        res.on('finish', () =>
-          setImmediate(() =>
-            record({
-              ts: Date.now(), traceId,
-              model:          body.model ?? 'unknown',
-              toolsReceived,  toolsForwarded:  toolsReceived,
-              tokensReceived, tokensForwarded: tokensReceived,
-            })
-          )
-        );
-        await proxyRequest(`${LOCAL_ENGINE_URL}/v1/chat/completions`, req, body, res);
-        return;
-      }
-
       if (Array.isArray(body.tools) && body.tools.length > 0) {
-        const userMsg = [...body.messages].reverse().find(m => m.role === 'user');
-        const prompt  = typeof userMsg?.content === 'string' ? userMsg.content : '';
+        const uMsg = [...body.messages].reverse().find(m => m.role === 'user');
+        const p    = typeof uMsg?.content === 'string' ? uMsg.content : '';
         const mcpTools: MCPTool[] = body.tools.map(t => ({
           name:        t.function.name,
           description: t.function.description ?? t.function.name,
         }));
-        const filtered = await filterTools(prompt, mcpTools);
+        const filtered = await filterTools(p, mcpTools);
         const keep     = new Set(filtered.map(t => t.name));
         body.tools     = body.tools.filter(t => keep.has(t.function.name));
       }
 
-      const toolsForwarded  = Array.isArray(body.tools) ? body.tools.length : 0;
+      const toolsForwarded  = Array.isArray(body.tools) ? body.tools.map(t => t.function.name) : [];
       const tokensForwarded = estimateTokens(body.tools ?? []);
 
+      const { status: upstreamStatus } = await proxyRequest(`${upstreamBase}/v1/chat/completions`, req, body, res);
+
       res.on('finish', () =>
-        setImmediate(() =>
+        setImmediate(() => {
           record({
             ts: Date.now(), traceId,
-            model: body.model ?? 'unknown',
-            toolsReceived,  toolsForwarded,
+            model:          body.model ?? 'unknown',
+            toolsReceived:  toolsOfferedNames.length, toolsForwarded:  toolsForwarded.length,
             tokensReceived, tokensForwarded,
-          })
-        )
+          });
+          writeTrace({
+            traceId,
+            timestamp:      new Date().toISOString(),
+            model:          body.model ?? 'unknown',
+            latencyMs:      Date.now() - startMs,
+            upstreamStatus,
+            toolsOffered:   toolsOfferedNames,
+            toolsForwarded,
+            tokensIn:       tokensReceived,
+            tokensOut:      tokensForwarded,
+            steps:          buildStepsFromOAIMessages(body.messages),
+            circuitBreaker: { tripped: false, mechanism: null, reason: null, detail: null },
+          });
+        })
       );
-
-      await proxyRequest(`${upstreamBase}/v1/chat/completions`, req, body, res);
 
     } catch (filterErr) {
       const errMsg = filterErr instanceof Error ? filterErr.message : String(filterErr);
@@ -546,4 +535,70 @@ export function openaiFilterMiddleware(upstreamBase: string) {
       }
     }
   };
+}
+
+// ── Message → TraceStep adapters ───────────────────────────────────────────
+
+import { createHash }               from 'node:crypto';
+import type { KillcordTraceStep }   from './trace';
+
+function hashArgs(args: unknown): string {
+  return createHash('sha256').update(JSON.stringify(args)).digest('hex').slice(0, 12);
+}
+
+type RawBlock = { type?: string; name?: string; text?: string; input?: unknown };
+type RawOAIMsg = { role?: string; content?: string | null; tool_calls?: Array<{ function?: { name?: string; arguments?: string } }> };
+
+function buildStepsFromMessages(messages: AnthropicMessage[]): KillcordTraceStep[] {
+  return messages.map((msg, i) => {
+    const toolCalls: KillcordTraceStep['toolCalls'] = [];
+    if (Array.isArray(msg.content)) {
+      for (const block of msg.content as unknown as RawBlock[]) {
+        if (block.type === 'tool_use' && block.name) {
+          const inputStr = JSON.stringify(block.input ?? {});
+          toolCalls.push({
+            name:         block.name,
+            inputPreview: redactPII(inputStr).slice(0, 500),
+            argsHash:     hashArgs(block.input),
+          });
+        }
+      }
+    }
+    const textContent = typeof msg.content === 'string'
+      ? msg.content
+      : (Array.isArray(msg.content)
+          ? (msg.content as unknown as RawBlock[]).filter(b => b.type === 'text').map(b => b.text ?? '').join(' ')
+          : '');
+    return {
+      index:       i,
+      role:        msg.role as KillcordTraceStep['role'],
+      toolCalls,
+      textPreview: redactPII(textContent).slice(0, 500),
+    };
+  });
+}
+
+function buildStepsFromOAIMessages(messages: OpenAIRequest['messages']): KillcordTraceStep[] {
+  return messages.map((msg, i) => {
+    const raw = msg as unknown as RawOAIMsg;
+    const toolCalls: KillcordTraceStep['toolCalls'] = [];
+    if (Array.isArray(raw.tool_calls)) {
+      for (const tc of raw.tool_calls) {
+        const name = tc.function?.name ?? 'unknown';
+        const argsRaw = tc.function?.arguments ?? '';
+        toolCalls.push({
+          name,
+          inputPreview: redactPII(argsRaw).slice(0, 500),
+          argsHash:     hashArgs(argsRaw),
+        });
+      }
+    }
+    const textContent = typeof raw.content === 'string' ? raw.content : '';
+    return {
+      index:       i,
+      role:        (msg.role === 'assistant' || msg.role === 'tool' ? msg.role : 'user') as KillcordTraceStep['role'],
+      toolCalls,
+      textPreview: redactPII(textContent).slice(0, 500),
+    };
+  });
 }

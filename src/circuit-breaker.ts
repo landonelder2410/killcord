@@ -19,7 +19,6 @@
  *   CB_REQUEST_LIMIT      (default 30)     — max requests per window per session
  */
 import Redis from 'ioredis';
-import { recordCircuitBreakerTrip } from './telemetry';
 
 export interface CircuitBreakerResult {
   tripped: boolean;
@@ -129,7 +128,6 @@ export function scanHistoryForLoop(
 
   for (const [name, count] of toolCounts) {
     if (count > limit) {
-      recordCircuitBreakerTrip('tool_loop');
       return {
         tripped: true,
         reason:  'tool_loop',
@@ -249,7 +247,6 @@ export async function checkCrossRequestLimits(
   // In-memory check always runs — fast and reliable within a single process/worker.
   const { count, tokenSum } = memRecord(sessionKey, estimatedTokens);
   if (count > REQUEST_LIMIT) {
-    recordCircuitBreakerTrip('burst_rate');
     return {
       tripped: true,
       reason:  'request_flood',
@@ -257,7 +254,6 @@ export async function checkCrossRequestLimits(
     };
   }
   if (tokenSum > TOKEN_LIMIT) {
-    recordCircuitBreakerTrip('burst_rate');
     return {
       tripped: true,
       reason:  'token_burst',
@@ -269,14 +265,12 @@ export async function checkCrossRequestLimits(
   try {
     const distributed = await redisCheck(sessionKey, estimatedTokens);
     if (distributed.tripped) {
-      recordCircuitBreakerTrip('burst_rate');
       return distributed;
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (failStrategy === 'fail-closed') {
       console.warn(`[killcord/cb] Redis unavailable; fail-closed → denying request. session=${sessionKey} err=${msg}`);
-      recordCircuitBreakerTrip('burst_rate');
       return {
         tripped: true,
         reason:  'request_flood',

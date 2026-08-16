@@ -192,6 +192,14 @@ export function billingRouter(): Router {
    * (checkout.session.completed) or via GET /key below.
    */
   router.post('/checkout', rateLimitMiddleware(10, 60_000, 'checkout'), async (req: Request, res: Response): Promise<void> => {
+    if (process.env.KILLCORD_BILLING_ENABLED !== 'true') {
+      res.status(503).json({
+        error:   'billing_disabled',
+        message: 'Billing is not enabled on this instance. Set KILLCORD_BILLING_ENABLED=true to enable.',
+      });
+      return;
+    }
+
     const allowed = getAllowedPrices();
 
     if (allowed.size === 0) {
@@ -283,6 +291,10 @@ export function billingRouter(): Router {
    * that scope.
    */
   router.get('/key', cors({ origin: '*' }), async (req: Request, res: Response): Promise<void> => {
+    if (process.env.KILLCORD_BILLING_ENABLED !== 'true') {
+      res.status(503).json({ error: 'billing_disabled' });
+      return;
+    }
     const sessionId = (req.query['session_id'] as string | undefined)?.trim();
 
     if (!sessionId) {
@@ -305,7 +317,7 @@ export function billingRouter(): Router {
       if (!licenseKey) {
         res.status(404).json({
           error:   'key_not_found',
-          message: 'No license key found for this session. Contact support at support@killcord.dev',
+          message: 'No license key found for this session. Open an issue at https://github.com/OWNER/killcord/issues',
         });
         return;
       }

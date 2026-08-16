@@ -19,9 +19,13 @@
  * without OOM on the Railway container.
  */
 
-const BASE   = process.env.KILLCORD_BASE_URL ?? 'https://killcord-production.up.railway.app';
-const ADMIN  = process.env.ADMIN_API_KEY ?? '';
+const BASE = process.env.KILLCORD_BASE_URL;
+if (!BASE) {
+  console.error('Set KILLCORD_BASE_URL (e.g. http://localhost:8080) before running this script.');
+  process.exit(1);
+}
 
+const ADMIN = process.env.ADMIN_API_KEY ?? '';
 if (!ADMIN) {
   console.error('Set ADMIN_API_KEY before running this script.');
   process.exit(1);

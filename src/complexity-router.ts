@@ -1,14 +1,10 @@
 /**
- * Request complexity classifier for dynamic model routing.
+ * Request complexity classifier.
  *
- * Simple requests  → local/quantized model (low latency, zero cloud cost)
- * Complex requests → primary cloud LLM API (best reasoning quality)
- *
- * Routing is opt-in via AUTO_ROUTE=true env var. When disabled, complexity
- * is still computed and exposed as the X-Killcord-Complexity response header
- * so downstream observers can act on it.
+ * Classifies each request as 'simple' or 'complex' and exposes the result
+ * as the X-Killcord-Complexity response header so observability tools can act
+ * on it. Used to surface routing intent without bundling a local model.
  */
-import { recordComplexity } from './telemetry';
 
 export type Complexity = 'simple' | 'complex';
 
@@ -47,14 +43,5 @@ export function classifyRequest(
   if (SIMPLE_RE.test(prompt.trim())) { score -= 2; reasons.push('simple keyword'); }
 
   const complexity: Complexity = score >= 3 ? 'complex' : 'simple';
-  recordComplexity(complexity);
   return { complexity, score, reasons: reasons.length ? reasons : ['default'] };
-}
-
-/**
- * Returns true when a simple request should be re-routed to the local engine.
- * Requires AUTO_ROUTE=true and a reachable LOCAL_ENGINE_URL.
- */
-export function shouldAutoRoute(complexity: Complexity): boolean {
-  return complexity === 'simple' && process.env.AUTO_ROUTE === 'true';
 }

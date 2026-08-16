@@ -1,6 +1,5 @@
 import { CopyButton }         from '../components/CopyButton';
 import { PricingSection }     from '../components/PricingSection';
-import { AgentReplayViewer }  from '../components/AgentReplayViewer';
 
 const INSTALL_CMD = 'npm install -g killcord';
 const GITHUB_URL  = 'https://github.com/landonelder2410/killcord';
@@ -51,9 +50,6 @@ export default function Home() {
           Start your 7-day free trial →
         </a>
       </section>
-
-      {/* ── Agent Replay ────────────────────────────────── */}
-      <AgentReplayViewer />
 
       {/* ── How it Works ────────────────────────────────── */}
       <section id="how-it-works" className="how">
@@ -216,8 +212,8 @@ export default function Home() {
             <p className="footer-copy">
               © 2026 Killcord. All rights reserved.
             </p>
-            <a className="footer-email" href="mailto:support@killcord.dev">
-              support@killcord.dev
+            <a className="footer-email" href="https://github.com/OWNER/killcord/issues">
+              GitHub Issues
             </a>
           </div>
 

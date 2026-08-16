@@ -8,6 +8,10 @@ function getStripe() {
 }
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
+  if (process.env.KILLCORD_BILLING_ENABLED !== 'true') {
+    return NextResponse.json({ error: 'billing_disabled' }, { status: 503 });
+  }
+
   const sessionId = req.nextUrl.searchParams.get('session_id')?.trim();
 
   if (!sessionId) {
@@ -30,7 +34,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const licenseKey = session.metadata?.licenseKey;
     if (!licenseKey) {
       return NextResponse.json(
-        { error: 'key_not_found', message: 'No license key for this session. Contact support@killcord.dev.' },
+        { error: 'key_not_found', message: 'No license key for this session. Open an issue at https://github.com/OWNER/killcord/issues.' },
         { status: 404 },
       );
     }

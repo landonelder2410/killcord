@@ -181,7 +181,6 @@ export function PricingSection() {
           </p>
           <ul className="pricing-features" aria-label="Free plan features">
             {[
-              '10K requests / month',
               'Semantic MCP tool filtering',
               'Basic Agent Replay Viewer',
               'Standard rate limits',
