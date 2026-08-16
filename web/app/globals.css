@@ -1,56 +1,74 @@
 /* ── Design tokens ──────────────────────────────────────────────────────────
-   Dark theme. ONE accent: amber (#f5a623).
-   Amber used only for: wordmark, TRIPPED indicators, ct-bad/ct-good cells.
-   Everything else is grayscale.
 
-   WCAG AA contrast on #0d0d0d background:
-     #e8e8e8  15.6:1  primary body       ✓
-     #a3a3a3   7.4:1  secondary prose    ✓
-     #8a8a8a   5.1:1  captions/meta      ✓ (≥4.5 required)
+   Type scale — exactly 5 sizes, defined as CSS variables:
+     --fs-xs:   0.75rem  (12px)  labels, pills, meta
+     --fs-sm:   0.875rem (14px)  secondary prose, code, table cells
+     --fs-base: 1rem     (16px)  body
+     --fs-lg:   1.375rem (22px)  section h2
+     --fs-hero: 2rem     (32px)  hero h1 — up to 2.5rem at 640px+
 
-   Type scale — 5 sizes:
-     s1  0.75rem   labels, pills, copy buttons
-     s2  0.875rem  code, table, secondary prose
-     s3  1rem      body (default)
-     s4  1.375rem  section h2
-     s5  2rem→2.5  hero h1 (2rem mobile, 2.5 desktop)
+   Font families: Geist Sans + Geist Mono (self-hosted via next/font).
+   CSS variables injected by layout.tsx via GeistSans.variable / GeistMono.variable.
 
-   Spacing: multiples of 8px throughout.
+   Accent: --purple #a78bfa (violet-400).
+   WCAG AA contrast on #0d0d0d: 7.1:1 ✓
+
+   All body text colors verified against #0d0d0d:
+     #e8e8e8  15.6:1  primary       ✓
+     #a3a3a3   7.4:1  secondary     ✓
+     #8a8a8a   5.1:1  captions      ✓ (≥4.5 required)
    ────────────────────────────────────────────────────────────────────────── */
 :root {
+  /* Type scale */
+  --fs-xs:   0.75rem;
+  --fs-sm:   0.875rem;
+  --fs-base: 1rem;
+  --fs-lg:   1.375rem;
+  --fs-hero: 2rem;
+
+  /* Font stacks — variables injected by Geist via layout.tsx */
+  --font-sans: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, 'Cascadia Code', monospace;
+
+  /* Color */
   --bg:      #0d0d0d;
   --bg-sub:  #181818;   /* privacy section, card surfaces */
   --bg-code: #1e1e1e;   /* code blocks */
   --border:  #262626;
   --border-2:#363636;
-  --text:    #e8e8e8;   /* primary — 15.6:1 ✓ */
-  --text-2:  #a3a3a3;   /* secondary — 7.4:1 ✓ */
-  --text-3:  #8a8a8a;   /* captions/meta — 5.1:1 ✓ */
-  --amber:   #f5a623;   /* ONE accent — nothing else uses color */
-  --max-w:   720px;
-  --px:      20px;
-  --mono:    'JetBrains Mono', 'Cascadia Code', ui-monospace, monospace;
+  --text:    #e8e8e8;   /* 15.6:1 ✓ */
+  --text-2:  #a3a3a3;   /* 7.4:1  ✓ */
+  --text-3:  #8a8a8a;   /* 5.1:1  ✓ */
+  --purple:  #a78bfa;   /* 7.1:1  ✓  — one accent, nothing else */
 
-  /* Terminal surface — lighter than page to read as a device */
+  /* Terminal surface — lighter than page, reads as a raised device */
   --term-bg:  #1a1a1a;
   --term-bar: #222222;
   --term-txt: #a3a3a3;
   --term-hi:  #e8e8e8;
   --term-dim: #525252;
+
+  /* Layout */
+  --max-w: 720px;
+  --px:    20px;
+}
+@media (min-width: 640px) {
+  :root {
+    --fs-hero: 2.5rem;
+    --px: 32px;
+  }
 }
 
-@media (min-width: 640px) { :root { --px: 32px; } }
-
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
 html { scroll-behavior: smooth; overflow-x: hidden; }
 
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
-  font-size: 1rem;       /* s3 */
-  line-height: 1.7;
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  font-weight: 400;
+  line-height: 1.65;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
@@ -58,7 +76,7 @@ body {
 a { color: inherit; text-decoration: none; }
 
 code {
-  font-family: var(--mono);
+  font-family: var(--font-mono);
   font-size: 0.875em;
   background: var(--bg-code);
   border: 1px solid var(--border-2);
@@ -86,18 +104,37 @@ code {
   justify-content: space-between;
   gap: 16px;
 }
+
+/* Mark + wordmark lockup */
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.header-mark {
+  /* Height matches cap height of the 14px wordmark (~70% of em).
+     viewBox is 2:1 (32×16 cropped), so width auto = 2× height. */
+  height: 0.6em;
+  width: auto;
+  color: var(--purple);
+  flex-shrink: 0;
+  /* Nudge down 1px to optically sit on the text baseline center */
+  position: relative;
+  top: 1px;
+}
 .logo {
-  font-family: var(--mono);
-  font-size: 0.875rem;   /* s2 */
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);     /* 14px */
   font-weight: 700;
-  color: var(--amber);   /* accent: wordmark */
-  letter-spacing: -0.02em;
+  color: var(--purple);
+  letter-spacing: -0.03em;
 }
 .header-links {
   display: flex;
   align-items: center;
   gap: 24px;
-  font-size: 0.875rem;   /* s2 */
+  font-size: var(--fs-sm);
   color: var(--text-3);
 }
 .header-links a { transition: color 0.12s; }
@@ -106,7 +143,7 @@ code {
   background: var(--text);
   border-radius: 4px;
   padding: 5px 14px;
-  font-size: 0.75rem;    /* s1 */
+  font-size: var(--fs-xs);
   font-weight: 600;
   color: var(--bg) !important;
   transition: opacity 0.12s !important;
@@ -121,36 +158,39 @@ code {
 }
 
 /* ── Hero ────────────────────────────────────────────────────────────────── */
-/* Tight on mobile — install command visible at 375×812 without scrolling */
-.hero {
-  padding: 40px 0 24px;
-}
-@media (min-width: 640px) {
-  .hero { padding: 72px 0 56px; }
+.hero { padding: 40px 0 24px; }
+@media (min-width: 640px) { .hero { padding: 72px 0 56px; } }
+
+/* Mark above wordmark — logo lockup. Height ~3/4 of h1 font size.
+   viewBox 2:1 so width = 2 × height. Sits 16px above the h1. */
+.hero-mark {
+  display: block;
+  height: calc(var(--fs-hero) * 0.65);
+  width: auto;
+  color: var(--purple);
+  margin-bottom: 12px;
 }
 
 .hero-h1 {
-  font-family: var(--mono);
-  font-size: 2rem;       /* s5-mobile */
+  font-family: var(--font-mono);
+  font-size: var(--fs-hero);
   font-weight: 700;
-  letter-spacing: -0.04em;
-  line-height: 1;
-  color: var(--amber);   /* accent: wordmark */
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  color: var(--purple);
   margin-bottom: 12px;
-}
-@media (min-width: 640px) {
-  .hero-h1 { font-size: 2.5rem; } /* s5-desktop */
 }
 
 .hero-sub {
-  font-size: 1rem;       /* s3 */
+  font-size: var(--fs-base);
+  font-weight: 400;
   color: var(--text-2);
   max-width: 520px;
-  line-height: 1.6;
+  line-height: 1.65;
   margin-bottom: 24px;
 }
 
-/* Install command — visual anchor */
+/* Install command */
 .install-wrap {
   display: inline-flex;
   align-items: stretch;
@@ -162,8 +202,8 @@ code {
   max-width: 100%;
 }
 .install-cmd {
-  font-family: var(--mono);
-  font-size: 1rem;       /* s3 */
+  font-family: var(--font-mono);
+  font-size: var(--fs-base);
   padding: 12px 16px;
   color: var(--text);
   overflow-x: auto;
@@ -180,8 +220,8 @@ code {
   border: none;
   border-left: 1px solid var(--border-2);
   color: var(--text-3);
-  font-size: 0.75rem;    /* s1 */
-  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  font-family: var(--font-mono);
   font-weight: 600;
   padding: 0 14px;
   cursor: pointer;
@@ -191,17 +231,13 @@ code {
   min-width: 52px;
 }
 .copy-btn:hover  { color: var(--text); background: var(--border); }
-.copy-btn.copied { color: var(--amber); }
+.copy-btn.copied { color: var(--purple); }
 
-.hero-links {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
+.hero-links { display: flex; gap: 8px; flex-wrap: wrap; }
 .btn {
   display: inline-flex;
   align-items: center;
-  font-size: 0.875rem;   /* s2 */
+  font-size: var(--fs-sm);
   font-weight: 500;
   padding: 7px 14px;
   border-radius: 4px;
@@ -216,8 +252,6 @@ code {
 .btn-ghost:hover { border-color: var(--text-3); color: var(--text); }
 
 /* ── Terminal demo ───────────────────────────────────────────────────────── */
-/* Standalone between hero and first section.
-   Lighter surface (#1a1a1a) on dark page (#0d0d0d) — reads as a device. */
 .demo-wrap {
   border-top: 1px solid var(--border);
   padding-top: 32px;
@@ -227,8 +261,8 @@ code {
   border: 1px solid var(--border-2);
   border-radius: 8px;
   overflow: hidden;
-  font-family: var(--mono);
-  font-size: 0.875rem;   /* s2 */
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
 }
 .demo-titlebar {
   background: var(--term-bar);
@@ -240,7 +274,7 @@ code {
 }
 .demo-dots { display: flex; gap: 6px; flex-shrink: 0; }
 .demo-dot  { width: 10px; height: 10px; border-radius: 50%; background: var(--border-2); }
-.demo-title { color: var(--term-dim); font-size: 0.75rem; font-weight: 500; }
+.demo-title { color: var(--term-dim); font-size: var(--fs-xs); font-weight: 500; }
 .demo-body {
   padding: 16px 20px;
   overflow-x: auto;
@@ -248,28 +282,23 @@ code {
 }
 .demo-pre {
   white-space: pre;
-  line-height: 1.75;
+  line-height: 1.5;           /* tighter in terminal = more scannable */
   color: var(--term-txt);
 }
 
-/* Terminal syntax classes — all grayscale except t-trip (amber) */
+/* Terminal syntax — only t-trip gets the accent, everything else grayscale */
 .t-dim   { color: var(--term-dim); }
 .t-hi    { color: var(--term-hi); }
-.t-tool  { color: var(--term-hi); }      /* tool names */
-.t-ok    { color: var(--text-3); }       /* muted — absence of a problem */
-.t-trip  { color: var(--amber); font-weight: 700; } /* accent */
+.t-tool  { color: var(--term-hi); }
+.t-ok    { color: var(--text-3); }
+.t-trip  { color: var(--purple); font-weight: 700; }
 .t-key   { color: var(--text-2); }
 .t-str   { color: var(--text-2); }
 .t-num   { color: var(--text); }
 
 /* ── Sections ────────────────────────────────────────────────────────────── */
-.section {
-  padding: 48px 0;
-  border-top: 1px solid var(--border);
-}
-@media (min-width: 640px) {
-  .section { padding: 64px 0; }
-}
+.section { padding: 48px 0; border-top: 1px solid var(--border); }
+@media (min-width: 640px) { .section { padding: 64px 0; } }
 
 .section-highlight {
   background: var(--bg-sub);
@@ -278,36 +307,35 @@ code {
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
 }
-@media (min-width: 640px) {
-  .section-highlight { padding: 64px var(--px); }
-}
+@media (min-width: 640px) { .section-highlight { padding: 64px var(--px); } }
 
 .section-label {
-  font-family: var(--mono);
-  font-size: 0.75rem;    /* s1 */
-  font-weight: 700;
-  letter-spacing: 0.1em;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--text-3);
   margin-bottom: 12px;
 }
 .section-h2 {
-  font-size: 1.375rem;   /* s4 */
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.3;
+  font-size: var(--fs-lg);
+  font-weight: 600;           /* 600, not 700 — heavy reads dated */
+  letter-spacing: -0.03em;
+  line-height: 1.05;
   color: var(--text);
   margin-bottom: 20px;
 }
 .section-body {
+  font-size: var(--fs-base);
   color: var(--text-2);
   margin-bottom: 20px;
   max-width: 600px;
-  line-height: 1.75;
+  line-height: 1.65;
 }
 .section-body:last-child { margin-bottom: 0; }
-.section-body.muted { color: var(--text-3); font-size: 0.875rem; }
-.section-body strong { color: var(--text); }
+.section-body.muted { color: var(--text-3); font-size: var(--fs-sm); }
+.section-body strong { color: var(--text); font-weight: 600; }
 .section-body em { color: var(--text); font-style: normal; font-weight: 500; }
 .text-link {
   color: var(--text-2);
@@ -324,7 +352,7 @@ code {
   border-radius: 6px;
   overflow: hidden;
   margin-bottom: 32px;
-  font-size: 0.875rem;   /* s2 */
+  font-size: var(--fs-sm);
 }
 .ct-header {
   display: grid;
@@ -333,8 +361,8 @@ code {
   padding: 10px 16px;
   background: var(--bg-sub);
   border-bottom: 1px solid var(--border-2);
-  font-family: var(--mono);
-  font-size: 0.75rem;    /* s1 */
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -350,10 +378,32 @@ code {
 }
 .ct-row:last-child { border-bottom: none; }
 .ct-scenario { color: var(--text-2); }
-/* Both notable outcomes use amber — draws the eye to the key contrast */
-.ct-good    { color: var(--amber); font-family: var(--mono); font-size: 0.75rem; white-space: nowrap; text-align: center; font-weight: 600; }
-.ct-bad     { color: var(--amber); font-family: var(--mono); font-size: 0.75rem; white-space: nowrap; text-align: center; font-weight: 600; }
-.ct-neutral { color: var(--text-3); font-family: var(--mono); font-size: 0.75rem; white-space: nowrap; text-align: center; }
+.ct-good {
+  color: var(--purple);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-align: center;
+}
+.ct-bad {
+  color: var(--purple);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-align: center;
+}
+.ct-neutral {
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
 
 /* ── Checks list ─────────────────────────────────────────────────────────── */
 .checks-list {
@@ -365,8 +415,8 @@ code {
 }
 .checks-list li { display: flex; gap: 14px; align-items: flex-start; }
 .check-num {
-  font-family: var(--mono);
-  font-size: 0.75rem;    /* s1 */
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
   font-weight: 700;
   color: var(--bg);
   background: var(--text-3);
@@ -377,14 +427,14 @@ code {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  margin-top: 4px;
+  margin-top: 3px;
 }
 .checks-list li div {
-  font-size: 0.875rem;   /* s2 */
+  font-size: var(--fs-sm);
   color: var(--text-2);
   line-height: 1.7;
 }
-.checks-list li strong { color: var(--text); }
+.checks-list li strong { color: var(--text); font-weight: 600; }
 
 /* ── Code block ──────────────────────────────────────────────────────────── */
 .code-block {
@@ -409,9 +459,9 @@ code {
   background: var(--bg-code);
 }
 .code-block pre {
-  font-family: var(--mono);
-  font-size: 0.875rem;   /* s2 */
-  line-height: 1.8;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  line-height: 1.75;
   padding: 20px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -430,20 +480,19 @@ code {
   display: flex;
   gap: 14px;
   align-items: flex-start;
-  font-size: 0.875rem;   /* s2 */
+  font-size: var(--fs-sm);
   line-height: 1.7;
   color: var(--text-2);
 }
-.privacy-item strong { color: var(--text); display: block; margin-bottom: 2px; }
+.privacy-item strong { color: var(--text); font-weight: 600; display: block; margin-bottom: 2px; }
 .privacy-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   flex-shrink: 0;
-  margin-top: 8px;
+  margin-top: 7px;
   background: var(--text-3);
 }
-.privacy-dot--green { background: var(--text-3); }
 
 /* ── Snippet grid ────────────────────────────────────────────────────────── */
 .snippet-grid {
@@ -452,9 +501,8 @@ code {
   gap: 10px;
   margin: 20px 0 24px;
 }
-@media (min-width: 640px) {
-  .snippet-grid { grid-template-columns: repeat(2, 1fr); }
-}
+@media (min-width: 640px) { .snippet-grid { grid-template-columns: repeat(2, 1fr); } }
+
 .snippet-card {
   background: var(--bg-code);
   border: 1px solid var(--border-2);
@@ -470,17 +518,17 @@ code {
   background: var(--bg-sub);
 }
 .snippet-label {
-  font-family: var(--mono);
-  font-size: 0.75rem;    /* s1 */
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-3);
 }
 .snippet-code {
-  font-family: var(--mono);
-  font-size: 0.875rem;   /* s2 */
-  line-height: 1.8;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  line-height: 1.75;
   padding: 14px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -497,15 +545,10 @@ code {
 }
 
 /* ── License pills ───────────────────────────────────────────────────────── */
-.license-pills {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 20px;
-}
+.license-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 20px; }
 .pill {
-  font-family: var(--mono);
-  font-size: 0.75rem;    /* s1 */
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
   font-weight: 600;
   padding: 4px 12px;
   border-radius: 100px;
@@ -531,14 +574,23 @@ code {
 .footer-left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
+}
+/* Footer mark: small, grayscale */
+.footer-mark {
+  height: 0.55em;
+  width: auto;
+  color: var(--text-3);
+  flex-shrink: 0;
+  position: relative;
+  top: 1px;
 }
 .footer-copy {
-  font-size: 0.75rem;    /* s1 */
+  font-size: var(--fs-xs);
   color: var(--text-3);
 }
 .footer-meta {
-  font-size: 0.875rem;   /* s2 */
+  font-size: var(--fs-sm);
   color: var(--text-3);
   display: flex;
   gap: 16px;

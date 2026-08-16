@@ -1,4 +1,5 @@
 import { CopyButton } from '../components/CopyButton';
+import { BrokenCircuit } from '../components/BrokenCircuit';
 
 const GITHUB_URL = 'https://github.com/landonelder2410/killcord';
 const NPM_URL    = 'https://www.npmjs.com/package/killcord';
@@ -53,7 +54,11 @@ export default function Home() {
       {/* ── Header ────────────────────────────────────────────────────── */}
       <header className="site-header">
         <div className="header-inner">
-          <span className="logo">killcord</span>
+          {/* Mark left of wordmark, optically aligned to cap height */}
+          <div className="header-brand">
+            <BrokenCircuit className="header-mark" />
+            <span className="logo">killcord</span>
+          </div>
           <nav className="header-links">
             <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">GitHub</a>
             <a href={NPM_URL}    target="_blank" rel="noopener noreferrer">npm</a>
@@ -66,6 +71,10 @@ export default function Home() {
 
         {/* ── 1. HERO ────────────────────────────────────────────────── */}
         <section className="hero">
+          {/* Mark above wordmark — logo lockup. Omitting from hero
+              would lose the brand anchor; above is cleaner than beside
+              at this scale since the h1 is large enough to pair with. */}
+          <BrokenCircuit className="hero-mark" />
           <h1 className="hero-h1">killcord</h1>
           <p className="hero-sub">
             Agents that loop don't stop — they burn budget until something else breaks.
@@ -83,9 +92,6 @@ export default function Home() {
         </section>
 
         {/* ── TERMINAL DEMO — standalone, above all prose sections ───── */}
-        {/* Real output from: npx tsx scripts/demo-runaway-agent.mjs     */}
-        {/* Scenario 2: exact-match sees 4 names, fires 0 times.         */}
-        {/* Semantic trips at turn 4, similarity=0.969.                  */}
         <div className="demo-wrap">
           <div className="demo-terminal">
             <div className="demo-titlebar">
@@ -125,7 +131,6 @@ export default function Home() {
           <p className="section-label">The problem</p>
           <h2 className="section-h2">Exact-match counts names. Rotating names makes the loop unbounded.</h2>
 
-          {/* Comparison table leads — data before prose */}
           <div className="comparison-table">
             <div className="ct-header">
               <span>Scenario</span>
@@ -236,7 +241,7 @@ export default function Home() {
 
           <div className="privacy-grid">
             <div className="privacy-item">
-              <span className="privacy-dot privacy-dot--green" />
+              <span className="privacy-dot" />
               <div>
                 <strong>Model runs locally</strong>
                 MiniLM-L6-v2 (~90 MB) downloads once from HuggingFace on first run, then runs
@@ -244,7 +249,7 @@ export default function Home() {
               </div>
             </div>
             <div className="privacy-item">
-              <span className="privacy-dot privacy-dot--green" />
+              <span className="privacy-dot" />
               <div>
                 <strong>One upstream connection only</strong>
                 The only outbound TCP connection is to the LLM API you configure
@@ -253,7 +258,7 @@ export default function Home() {
               </div>
             </div>
             <div className="privacy-item">
-              <span className="privacy-dot privacy-dot--green" />
+              <span className="privacy-dot" />
               <div>
                 <strong>Optional extras stay optional</strong>
                 Redis and Stripe are only contacted if you set <code>REDIS_URL</code> or{' '}
@@ -261,7 +266,7 @@ export default function Home() {
               </div>
             </div>
             <div className="privacy-item">
-              <span className="privacy-dot privacy-dot--green" />
+              <span className="privacy-dot" />
               <div>
                 <strong>Verifiable</strong>
                 Run <code>node scripts/verify-no-telemetry.mjs</code> — starts the proxy against
@@ -340,6 +345,8 @@ OPENAI_UPSTREAM=https://api.openai.com     killcord`}</pre>
       <footer className="site-footer">
         <div className="footer-inner">
           <div className="footer-left">
+            {/* Mark in footer: small, grayscale via footer-mark class */}
+            <BrokenCircuit className="footer-mark" />
             <span className="logo">killcord</span>
             <span className="footer-copy">MIT 0.1.x · Driftflow LLC</span>
           </div>
