@@ -38,7 +38,7 @@ export default function Home() {
       <header className="site-header">
         <div className="header-inner">
           <span className="logo">
-            <img src="/logo.png" alt="" width={20} height={20} className="logo-img" />
+            <img src="/logo.png" alt="" width={26} height={26} className="logo-img" />
             killcord
           </span>
           <nav className="header-links">

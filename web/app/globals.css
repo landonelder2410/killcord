@@ -103,14 +103,15 @@ code {
 }
 .logo {
   font-family: var(--font-mono);
-  font-size: var(--fs-sm);
+  font-size: 1.25rem;
   font-weight: 700;
+  line-height: 1;
   color: var(--amber);
   letter-spacing: -0.04em;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
 }
 .logo-img { display: block; flex-shrink: 0; background: #000; }
 .header-links {
@@ -119,6 +120,9 @@ code {
   gap: 24px;
   font-size: var(--fs-sm);
   color: var(--text-3);
+}
+@media (max-width: 479px) {
+  .header-links a:not(.header-cta) { display: none; }
 }
 .header-links a { transition: color 0.12s; }
 .header-links a:hover { color: var(--text); }
