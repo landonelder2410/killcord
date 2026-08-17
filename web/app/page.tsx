@@ -35,18 +35,11 @@ llm = ChatAnthropic(
 export default function Home() {
   return (
     <>
-      {/* ── Header ────────────────────────────────────────────────────────────── */}
+      {/* ── Header ──────────────────────────────────────────────────────────── */}
       <header className="site-header">
         <div className="header-inner">
           <span className="logo">
-            <Image
-              src="/logo.png"
-              alt=""
-              width={20}
-              height={20}
-              className="logo-img"
-              priority
-            />
+            <Image src="/logo.png" alt="" width={20} height={20} className="logo-img" priority />
             killcord
           </span>
           <nav className="header-links">
@@ -59,16 +52,9 @@ export default function Home() {
 
       <main className="main-col">
 
-        {/* ── 1. HERO ────────────────────────────────────────────────────────── */}
+        {/* ── 1. HERO ─────────────────────────────────────────────────────── */}
         <section className="hero">
-          <Image
-            src="/logo.png"
-            alt=""
-            width={56}
-            height={56}
-            className="hero-logo"
-            priority
-          />
+          <Image src="/logo.png" alt="" width={56} height={56} className="hero-logo" priority />
           <h1 className="hero-h1">killcord</h1>
           <p className="hero-sub">
             Agents that loop don't stop — they burn budget until something else breaks.
@@ -85,8 +71,8 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── TERMINAL DEMO ─────────────────────────────────────────────────────
-            All lines ≤ 30ch at 14px Geist Mono — fits 375px viewport. */}
+        {/* ── TERMINAL DEMO ───────────────────────────────────────────────────
+            All lines ≤ 30ch at 14px Geist Mono. */}
         <div className="demo-wrap">
           <div className="demo-terminal">
             <div className="demo-titlebar">
@@ -117,8 +103,10 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ── EVIDENCE BLOCK ──────────────────────────────────────────────────── */}
+        {/* ── EVIDENCE: capability table + stats + integration ─────────────── */}
         <div className="evidence-block">
+
+          {/* Capability comparison — honest on the "needs daemon" column */}
           <div className="cap-table-wrap">
             <div className="cap-table">
               <div className="cap-header">
@@ -126,11 +114,11 @@ export default function Home() {
                 <span>repeated calls</span>
                 <span>rephrased args</span>
                 <span>rotated names</span>
-                <span>needs process</span>
+                <span>needs daemon</span>
               </div>
               <div className="cap-row">
                 <span className="cap-label">Iteration caps</span>
-                <span className="cap-yes">yes</span>
+                <span className="cap-yes">✓</span>
                 <span className="cap-no">—</span>
                 <span className="cap-no">—</span>
                 <span className="cap-no">—</span>
@@ -144,13 +132,15 @@ export default function Home() {
               </div>
               <div className="cap-row cap-row--killcord">
                 <span className="cap-label">Killcord</span>
-                <span className="cap-yes">yes</span>
-                <span className="cap-yes">yes</span>
-                <span className="cap-yes">yes</span>
-                <span className="cap-local">local proxy</span>
+                <span className="cap-yes">✓</span>
+                <span className="cap-yes">✓</span>
+                <span className="cap-yes">✓</span>
+                <span className="cap-cost">yes — local proxy</span>
               </div>
             </div>
           </div>
+
+          {/* Measured numbers — joined visually to the table */}
           <div className="stats-row">
             <div className="stat-item">
               <div className="stat-num">0.94</div>
@@ -161,8 +151,8 @@ export default function Home() {
               <div className="stat-label">per request</div>
             </div>
             <div className="stat-item">
-              <div className="stat-num">5-turn</div>
-              <div className="stat-label">sliding window</div>
+              <div className="stat-num">5/5</div>
+              <div className="stat-label">turn separation</div>
             </div>
             <div className="stat-item">
               <div className="stat-num">0 bytes</div>
@@ -171,8 +161,33 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ── 2. THE PROBLEM ──────────────────────────────────────────────────── */}
-        <section className="section" id="problem">
+        {/* ── IN YOUR CODE ────────────────────────────────────────────────── */}
+        <section className="section" id="integration">
+          <p className="section-label">Integration</p>
+          <h2 className="section-h2">One line. Every framework.</h2>
+          <p className="section-body">
+            Point <code>base_url</code> at the local proxy. Nothing else changes — your framework,
+            your auth, your tool definitions, your retry logic. All untouched.
+          </p>
+          <div className="code-stacks">
+            {INTEGRATION_SNIPPETS.map(s => (
+              <div key={s.label} className="snippet-card">
+                <div className="snippet-header">
+                  <span className="snippet-label">{s.label}</span>
+                  <CopyButton text={s.code} />
+                </div>
+                <pre className="snippet-code">{s.code}</pre>
+              </div>
+            ))}
+          </div>
+          <p className="section-body muted">
+            AutoGen, CrewAI, and any other framework that accepts a base URL work the same way.
+            Node.js SDKs: pass <code>baseURL</code> instead of <code>base_url</code>.
+          </p>
+        </section>
+
+        {/* ── THE PROBLEM ─────────────────────────────────────────────────── */}
+        <section className="section section-alt" id="problem">
           <p className="section-label">The problem</p>
           <h2 className="section-h2">Exact-match counts names. Rotating names makes the loop unbounded.</h2>
 
@@ -216,7 +231,7 @@ export default function Home() {
           </p>
         </section>
 
-        {/* ── 3. HOW IT WORKS ─────────────────────────────────────────────────── */}
+        {/* ── HOW IT WORKS ─────────────────────────────────────────────────── */}
         <section className="section" id="how-it-works">
           <p className="section-label">How it works</p>
           <h2 className="section-h2">Three checks. Cheapest first.</h2>
@@ -273,32 +288,7 @@ export default function Home() {
           </p>
         </section>
 
-        {/* ── 4. INTEGRATION ──────────────────────────────────────────────────── */}
-        <section className="section" id="integration">
-          <p className="section-label">Integration</p>
-          <h2 className="section-h2">One line. Every framework.</h2>
-          <p className="section-body">
-            Point <code>base_url</code> at the local proxy. Nothing else changes — your framework,
-            your auth, your tool definitions, your retry logic. All untouched.
-          </p>
-          <div className="code-stacks">
-            {INTEGRATION_SNIPPETS.map(s => (
-              <div key={s.label} className="snippet-card">
-                <div className="snippet-header">
-                  <span className="snippet-label">{s.label}</span>
-                  <CopyButton text={s.code} />
-                </div>
-                <pre className="snippet-code">{s.code}</pre>
-              </div>
-            ))}
-          </div>
-          <p className="section-body muted">
-            AutoGen, CrewAI, and any other framework that accepts a base URL work the same way.
-            Node.js SDKs: pass <code>baseURL</code> instead of <code>base_url</code>.
-          </p>
-        </section>
-
-        {/* ── 5. PRIVACY ──────────────────────────────────────────────────────── */}
+        {/* ── PRIVACY ──────────────────────────────────────────────────────── */}
         <section className="section section-highlight" id="privacy">
           <p className="section-label">Privacy and data handling</p>
           <h2 className="section-h2">Runs on your machine. Nothing leaves.</h2>
@@ -349,7 +339,7 @@ export default function Home() {
           </p>
         </section>
 
-        {/* ── 6. QUICKSTART ───────────────────────────────────────────────────── */}
+        {/* ── QUICKSTART ───────────────────────────────────────────────────── */}
         <section className="section" id="quickstart">
           <p className="section-label">Quick start</p>
           <h2 className="section-h2">Install, start, point your agent.</h2>
@@ -370,8 +360,8 @@ OPENAI_UPSTREAM=https://api.openai.com     killcord`}</pre>
           </div>
         </section>
 
-        {/* ── 7. LICENSING ────────────────────────────────────────────────────── */}
-        <section className="section" id="licensing">
+        {/* ── LICENSING ────────────────────────────────────────────────────── */}
+        <section className="section section-alt" id="licensing">
           <p className="section-label">Licensing</p>
           <h2 className="section-h2">Free for personal and evaluation use.</h2>
           <p className="section-body">
