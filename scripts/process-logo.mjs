@@ -1,7 +1,11 @@
 #!/usr/bin/env node
 /**
- * Processes web/logo-raw.png → transparent icon.png (512), apple-icon.png (180),
- * public/logo.png (256), and regenerates opengraph-image.png.
+ * Processes web/logo-raw.png into:
+ *   web/app/icon.png        512×512  — amber K on #0a0a0a rounded square
+ *   web/app/apple-icon.png  180×180  — same
+ *   web/public/logo.png     256×256  — transparent, for in-page use
+ *   web/app/opengraph-image.png
+ *
  * Run from web/: node ../scripts/process-logo.mjs
  */
 
@@ -16,95 +20,130 @@ const sharp     = require(path.join(__dirname, '../web/node_modules/sharp'));
 const webDir = path.join(__dirname, '../web');
 const input  = path.join(webDir, 'logo-raw.png');
 
-// ── Step 1: trim dark background ─────────────────────────────────────────────
-const trimmed = await sharp(input)
-  .trim({ background: '#000000', threshold: 30 })
-  .toBuffer();
+// ── Step 1: ensureAlpha + raw pixel pass ────────────────────────────────────
+// ensureAlpha adds an alpha=255 channel to the flat RGB source.
+// Raw pass: r < 60 AND g < 60 AND b < 60 → alpha = 0 (black bg keyed out).
+// Amber pixels (r ≈ 252, g ≈ 162, b ≈ 11) all have r > 60, so they stay.
+const { data: px, info } = await sharp(input)
+  .ensureAlpha()
+  .raw()
+  .toBuffer({ resolveWithObject: true });
 
-// ── Step 2: get raw RGB pixels of trimmed image ───────────────────────────────
-const { data: px, info } = await sharp(trimmed).raw().toBuffer({ resolveWithObject: true });
-const { width: kw, height: kh, channels } = info;
+const { width: W, height: H } = info; // channels is 4 after ensureAlpha
 
-// ── Step 3: key out near-black → alpha 0; soft edge zone ─────────────────────
-//   Background max-brightness ≈ 0–2; K fill ≈ 252; threshold range 20–55
-const rgba = Buffer.alloc(kw * kh * 4);
-for (let i = 0; i < kw * kh; i++) {
-  const r = px[i * channels];
-  const g = px[i * channels + 1];
-  const b = px[i * channels + 2];
-  rgba[i * 4]     = r;
-  rgba[i * 4 + 1] = g;
-  rgba[i * 4 + 2] = b;
-  const bright = Math.max(r, g, b);
-  if (bright <= 20) {
-    rgba[i * 4 + 3] = 0;
-  } else if (bright < 55) {
-    rgba[i * 4 + 3] = Math.round(((bright - 20) / 35) * 255);
-  } else {
-    rgba[i * 4 + 3] = 255;
+for (let i = 0; i < W * H; i++) {
+  if (px[i*4] < 60 && px[i*4+1] < 60 && px[i*4+2] < 60) {
+    px[i*4+3] = 0;
   }
 }
 
-// ── Step 4: add transparent padding so K fills ~85% of frame ─────────────────
-const maxDim = Math.max(kw, kh);
-const pad = Math.round(maxDim * (7.5 / 85));
+// ── Verify ──────────────────────────────────────────────────────────────────
+const corner = { r: px[0], g: px[1], b: px[2], a: px[3] };
+let amberFound = null;
+for (let i = 0; i < W * H; i++) {
+  if (px[i*4] > 200 && px[i*4+3] === 255) {
+    amberFound = { r: px[i*4], g: px[i*4+1], b: px[i*4+2], a: px[i*4+3] };
+    break;
+  }
+}
+console.log('corner alpha:', corner.a, '— expected 0');
+console.log('first amber pixel:', JSON.stringify(amberFound), '— expected a=255');
 
-// Flush extend to PNG first — chaining extend+resize from raw buffer in one
-// sharp pipeline produces wrong dimensions; the two-step version is correct.
-const extendedPng = await sharp(rgba, { raw: { width: kw, height: kh, channels: 4 } })
+// ── Step 2: find bounding box of non-transparent pixels ─────────────────────
+let minX = W, maxX = 0, minY = H, maxY = 0;
+for (let y = 0; y < H; y++) {
+  for (let x = 0; x < W; x++) {
+    if (px[(y*W+x)*4+3] > 0) {
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+  }
+}
+const kw = maxX - minX + 1, kh = maxY - minY + 1;
+console.log(`K bounding box: ${kw}×${kh} at (${minX},${minY})`);
+
+// ── Step 3: extract K, add transparent padding so K fills ~85% ──────────────
+const maxDim = Math.max(kw, kh);
+const pad    = Math.round(maxDim * (7.5 / 85));
+
+// Extract → PNG buffer (avoids the raw→chain resize bug in sharp)
+const kPng = await sharp(px, { raw: { width: W, height: H, channels: 4 } })
+  .extract({ left: minX, top: minY, width: kw, height: kh })
+  .png()
+  .toBuffer();
+
+// Extend with transparent padding → PNG buffer
+const extPng = await sharp(kPng)
   .extend({ top: pad, bottom: pad, left: pad, right: pad,
             background: { r: 0, g: 0, b: 0, alpha: 0 } })
   .png()
   .toBuffer();
 
-async function makeIcon(size, outPath) {
-  await sharp(extendedPng).resize(size, size).png().toFile(outPath);
+// ── Step 4: logo.png — transparent, 256×256 ──────────────────────────────────
+await sharp(extPng)
+  .resize(256, 256)
+  .png()
+  .toFile(path.join(webDir, 'public/logo.png'));
+console.log('  ✓ public/logo.png (transparent)');
+
+// ── Step 5: favicon versions — K on dark rounded square ─────────────────────
+async function makeIconWithBg(size, outPath) {
+  const radius = Math.round(size * 0.22);   // 22% corner radius
+  const kSize  = Math.round(size * 0.70);   // K fills 70% of frame
+  const offset = Math.round((size - kSize) / 2);
+
+  // Dark rounded-rect backdrop via SVG
+  const bgSvg = Buffer.from(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">` +
+    `<rect width="${size}" height="${size}" rx="${radius}" ry="${radius}" fill="#0a0a0a"/>` +
+    `</svg>`
+  );
+
+  const kBuf = await sharp(extPng).resize(kSize, kSize).png().toBuffer();
+
+  await sharp({ create: { width: size, height: size, channels: 4,
+                          background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+    .composite([
+      { input: bgSvg },
+      { input: kBuf, top: offset, left: offset },
+    ])
+    .png()
+    .toFile(outPath);
   console.log(`  ✓ ${outPath}`);
 }
 
-await makeIcon(512, path.join(webDir, 'app/icon.png'));
-await makeIcon(180, path.join(webDir, 'app/apple-icon.png'));
-await makeIcon(256, path.join(webDir, 'public/logo.png'));
+await makeIconWithBg(512, path.join(webDir, 'app/icon.png'));
+await makeIconWithBg(180, path.join(webDir, 'app/apple-icon.png'));
 
-// ── OG image (1200×630) ──────────────────────────────────────────────────────
-const W = 1200, H = 630;
-const AMBER  = '#f5a623';
-const MUTED  = '#a3a3a3';
-const TEXT   = '#e8e8e8';
-const CODEBG = '#111111';
-const BORDER = '#2a2a2a';
+// ── Step 6: OG image (1200×630) ──────────────────────────────────────────────
+const W_OG = 1200, H_OG = 630;
+const AMBER = '#f5a623', MUTED = '#a3a3a3', TEXT = '#e8e8e2';
+const CODEBG = '#111111', BORDER = '#2a2a2a';
 
-const svgBase = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
-  <rect width="${W}" height="${H}" fill="#0a0a0a"/>
-  <text x="80" y="232"
-    font-family="ui-monospace,'Cascadia Code','JetBrains Mono',monospace"
-    font-size="108" font-weight="700" letter-spacing="-4" fill="${AMBER}"
-  >killcord</text>
-  <text x="80" y="308"
-    font-family="ui-sans-serif,system-ui,-apple-system,sans-serif"
-    font-size="34" fill="${MUTED}"
-  >Semantic circuit breaker for AI agent loops.</text>
-  <rect x="80" y="360" width="560" height="72" rx="8"
-    fill="${CODEBG}" stroke="${BORDER}" stroke-width="1.5"/>
-  <text x="110" y="403"
-    font-family="ui-monospace,'Cascadia Code','JetBrains Mono',monospace"
-    font-size="28" fill="${MUTED}">$</text>
-  <text x="144" y="403"
-    font-family="ui-monospace,'Cascadia Code','JetBrains Mono',monospace"
-    font-size="28" fill="${TEXT}">npm install -g killcord</text>
-  <text x="${W - 80}" y="${H - 48}"
-    font-family="ui-monospace,'Cascadia Code','JetBrains Mono',monospace"
-    font-size="22" fill="${MUTED}" text-anchor="end"
-  >github.com/landonelder2410/killcord</text>
-</svg>`);
+const svgBase = Buffer.from(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="${W_OG}" height="${H_OG}">` +
+  `<rect width="${W_OG}" height="${H_OG}" fill="#0a0a0a"/>` +
+  `<text x="80" y="232" font-family="ui-monospace,'Cascadia Code',monospace" ` +
+    `font-size="108" font-weight="700" letter-spacing="-4" fill="${AMBER}">killcord</text>` +
+  `<text x="80" y="308" font-family="ui-sans-serif,system-ui,sans-serif" ` +
+    `font-size="34" fill="${MUTED}">Semantic circuit breaker for AI agent loops.</text>` +
+  `<rect x="80" y="360" width="560" height="72" rx="8" fill="${CODEBG}" stroke="${BORDER}" stroke-width="1.5"/>` +
+  `<text x="110" y="403" font-family="ui-monospace,'Cascadia Code',monospace" ` +
+    `font-size="28" fill="${MUTED}">$</text>` +
+  `<text x="144" y="403" font-family="ui-monospace,'Cascadia Code',monospace" ` +
+    `font-size="28" fill="${TEXT}">npm install -g killcord</text>` +
+  `<text x="${W_OG - 80}" y="${H_OG - 48}" font-family="ui-monospace,'Cascadia Code',monospace" ` +
+    `font-size="22" fill="${MUTED}" text-anchor="end">github.com/landonelder2410/killcord</text>` +
+  `</svg>`
+);
 
-// Logo 110×110, top-left above the wordmark
-const logoBuf = await sharp(extendedPng).resize(110, 110).png().toBuffer();
+const logoBuf = await sharp(extPng).resize(110, 110).png().toBuffer();
+const ogPath  = path.join(webDir, 'app/opengraph-image.png');
 
-const ogPath = path.join(webDir, 'app/opengraph-image.png');
 await sharp(svgBase)
   .composite([{ input: logoBuf, top: 42, left: 80 }])
   .png()
   .toFile(ogPath);
-
 console.log(`  ✓ ${ogPath}`);
