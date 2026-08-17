@@ -1,28 +1,30 @@
-/* ── Design tokens ──────────────────────────────────────────────────────────
+/* ── Type scale — exactly 5 sizes ────────────────────────────────────────────
+   xs:   0.75rem  / 12px  — labels, section labels, pills, meta
+   sm:   0.875rem / 14px  — terminal, table cells, secondary prose, code
+   base: 1rem     / 16px  — body copy
+   lg:   1.5rem   / 24px  — section h2 (Space Grotesk 700)
+   hero: 2.25rem  / 36px  — hero h1 wordmark; 3rem / 48px at 640px+
 
-   Type scale — exactly 5 sizes:
-     --fs-xs:   0.75rem  (12px)  labels, pills, meta
-     --fs-sm:   0.875rem (14px)  secondary prose, code, table cells
-     --fs-base: 1rem     (16px)  body
-     --fs-lg:   1.375rem (22px)  section h2
-     --fs-hero: 2rem     (32px)  hero h1 — up to 2.5rem at 640px+
-
-   Fonts: Geist Sans + Geist Mono via next/font (layout.tsx).
+   Fonts:
+     --font-display  Space Grotesk — technical character, not neutral
+     --font-sans     Geist Sans — body
+     --font-mono     Geist Mono — wordmark, labels, terminal, code
 
    Accents:
-     --amber: #f5a623  wordmark, section labels             10.3:1 ✓
-     --trip:  #ff6b35  TRIPPED + 429 in terminal             7.5:1 ✓
+     --amber: #f5a623  wordmark, section labels  10.3:1 on #0d0d0d ✓
+     --trip:  #ff6b35  TRIPPED + 429 in terminal  7.5:1 ✓
 
    Body text on #0d0d0d:
-     #e8e8e8  15.6:1  ✓   #a3a3a3  7.4:1  ✓   #8a8a8a  5.1:1  ✓
+     #e8e8e8  15.6:1 ✓   #a3a3a3  7.4:1 ✓   #8a8a8a  5.1:1 ✓
    ────────────────────────────────────────────────────────────────────────── */
 :root {
   --fs-xs:   0.75rem;
   --fs-sm:   0.875rem;
   --fs-base: 1rem;
-  --fs-lg:   1.375rem;
-  --fs-hero: 2rem;
+  --fs-lg:   1.5rem;
+  --fs-hero: 2.25rem;
 
+  --font-display: var(--font-space-grotesk), system-ui, -apple-system, sans-serif;
   --font-sans: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, 'Cascadia Code', monospace;
 
@@ -47,7 +49,7 @@
   --px:    20px;
 }
 @media (min-width: 640px) {
-  :root { --fs-hero: 2.5rem; --px: 32px; }
+  :root { --fs-hero: 3rem; --px: 32px; }
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -100,15 +102,13 @@ code {
   font-size: var(--fs-sm);
   font-weight: 700;
   color: var(--amber);
-  letter-spacing: -0.03em;
+  letter-spacing: -0.04em;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
 }
-.logo-mark { flex-shrink: 0; }
-.hero-mark { color: var(--amber); display: block; margin-bottom: 14px; }
-.footer-mark { color: var(--text-3); }
+.logo-img { display: block; flex-shrink: 0; }
 .header-links {
   display: flex;
   align-items: center;
@@ -137,17 +137,19 @@ code {
 }
 
 /* ── Hero ────────────────────────────────────────────────────────────────── */
-.hero { padding: 32px 0 20px; }
-@media (min-width: 640px) { .hero { padding: 56px 0 40px; } }
+.hero { padding: 40px 0 24px; }
+@media (min-width: 640px) { .hero { padding: 64px 0 48px; } }
+
+.hero-logo { display: block; margin-bottom: 20px; }
 
 .hero-h1 {
   font-family: var(--font-mono);
   font-size: var(--fs-hero);
   font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.05;
+  letter-spacing: -0.04em;
+  line-height: 1.0;
   color: var(--amber);
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 .hero-sub {
   font-size: var(--fs-base);
@@ -155,7 +157,7 @@ code {
   color: var(--text-2);
   max-width: 520px;
   line-height: 1.65;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .install-wrap {
@@ -256,6 +258,7 @@ code {
   white-space: pre;
   line-height: 1.5;
   color: var(--term-txt);
+  font-variant-numeric: tabular-nums;
 }
 
 .t-dim   { color: var(--term-dim); }
@@ -268,17 +271,12 @@ code {
 .t-num   { color: var(--text); }
 
 /* ── Evidence block — capability table + stats ───────────────────────────── */
-.evidence-block {
-  padding: 20px 0 4px;
-}
+.evidence-block { padding: 20px 0 4px; }
 
-/* Capability comparison table
-   min-width: 500px so columns stay readable; wrapper scrolls on mobile. */
 .cap-table-wrap {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   margin-bottom: 12px;
-  /* Fade right edge on mobile to signal scrollability */
 }
 .cap-table {
   min-width: 500px;
@@ -287,6 +285,7 @@ code {
   overflow: hidden;
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
 }
 .cap-header, .cap-row {
   display: grid;
@@ -303,7 +302,7 @@ code {
   display: flex;
   align-items: center;
 }
-.cap-h-label { /* empty first header cell */ }
+.cap-h-label { }
 .cap-header span:not(.cap-h-label) {
   font-size: 10px;
   font-weight: 700;
@@ -315,11 +314,8 @@ code {
 .cap-yes     { color: var(--text-2); }
 .cap-no      { color: var(--text-3); }
 .cap-local   { color: var(--amber); font-weight: 600; }
-
-/* Killcord row: subtle top border to separate from comparison rows */
 .cap-row--killcord { border-top: 1px solid var(--border-2); }
 
-/* Measured numbers */
 .stats-row {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -342,9 +338,10 @@ code {
   font-size: var(--fs-lg);
   font-weight: 700;
   color: var(--text);
-  letter-spacing: -0.03em;
-  line-height: 1;
+  letter-spacing: -0.035em;
+  line-height: 1.0;
   margin-bottom: 4px;
+  font-variant-numeric: tabular-nums;
 }
 .stat-label {
   font-size: var(--fs-xs);
@@ -369,16 +366,17 @@ code {
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
   font-weight: 600;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--amber);
   margin-bottom: 10px;
 }
 .section-h2 {
+  font-family: var(--font-display);
   font-size: var(--fs-lg);
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  line-height: 1.05;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.0;
   color: var(--text);
   margin-bottom: 16px;
 }
@@ -409,6 +407,7 @@ code {
   overflow: hidden;
   margin-bottom: 24px;
   font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
 }
 .ct-header {
   display: grid;
@@ -439,7 +438,6 @@ code {
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
   font-weight: 600;
-  font-variant-numeric: tabular-nums;
   white-space: nowrap;
   text-align: center;
 }
@@ -448,7 +446,6 @@ code {
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
   font-weight: 600;
-  font-variant-numeric: tabular-nums;
   white-space: nowrap;
   text-align: center;
 }
@@ -458,7 +455,6 @@ code {
   font-size: var(--fs-xs);
   white-space: nowrap;
   text-align: center;
-  font-variant-numeric: tabular-nums;
 }
 
 /* ── Checks list ─────────────────────────────────────────────────────────── */
@@ -523,9 +519,10 @@ code {
   -webkit-overflow-scrolling: touch;
   color: var(--text-2);
   white-space: pre;
+  font-variant-numeric: tabular-nums;
 }
 
-/* ── What it looks like — stacked snippet cards ──────────────────────────── */
+/* ── Integration snippet cards ───────────────────────────────────────────── */
 .code-stacks {
   display: flex;
   flex-direction: column;

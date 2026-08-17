@@ -1,12 +1,10 @@
+import Image from 'next/image';
 import { CopyButton } from '../components/CopyButton';
-import { Mark } from '../components/Mark';
 
 const GITHUB_URL  = 'https://github.com/landonelder2410/killcord';
 const NPM_URL     = 'https://www.npmjs.com/package/killcord';
 const INSTALL_CMD = 'npm install -g killcord';
 
-/* Shown in the "What it looks like" section.
-   Comments mark exactly what the user adds. */
 const INTEGRATION_SNIPPETS = [
   {
     label: 'Anthropic SDK',
@@ -37,11 +35,18 @@ llm = ChatAnthropic(
 export default function Home() {
   return (
     <>
-      {/* ── Header ────────────────────────────────────────────────────── */}
+      {/* ── Header ────────────────────────────────────────────────────────────── */}
       <header className="site-header">
         <div className="header-inner">
           <span className="logo">
-            <Mark size={18} className="logo-mark" />
+            <Image
+              src="/logo.png"
+              alt=""
+              width={20}
+              height={20}
+              className="logo-img"
+              priority
+            />
             killcord
           </span>
           <nav className="header-links">
@@ -54,9 +59,16 @@ export default function Home() {
 
       <main className="main-col">
 
-        {/* ── 1. HERO ────────────────────────────────────────────────── */}
+        {/* ── 1. HERO ────────────────────────────────────────────────────────── */}
         <section className="hero">
-          <Mark size={48} className="hero-mark" />
+          <Image
+            src="/logo.png"
+            alt=""
+            width={56}
+            height={56}
+            className="hero-logo"
+            priority
+          />
           <h1 className="hero-h1">killcord</h1>
           <p className="hero-sub">
             Agents that loop don't stop — they burn budget until something else breaks.
@@ -73,11 +85,8 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── TERMINAL DEMO ─────────────────────────────────────────────
-            All lines ≤ 30ch at 14px Geist Mono — fits 375px viewport.
-            Content area: 375 - 40px padding - 2px border - 40px demo-body
-            padding = 293px / 8.4px per char ≈ 34ch.
-            JSON "error" field dropped (42ch) — shown in full in How it works. */}
+        {/* ── TERMINAL DEMO ─────────────────────────────────────────────────────
+            All lines ≤ 30ch at 14px Geist Mono — fits 375px viewport. */}
         <div className="demo-wrap">
           <div className="demo-terminal">
             <div className="demo-titlebar">
@@ -108,10 +117,8 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ── EVIDENCE BLOCK — comparison table + measured numbers ────── */}
+        {/* ── EVIDENCE BLOCK ──────────────────────────────────────────────────── */}
         <div className="evidence-block">
-
-          {/* Capability comparison */}
           <div className="cap-table-wrap">
             <div className="cap-table">
               <div className="cap-header">
@@ -144,8 +151,6 @@ export default function Home() {
               </div>
             </div>
           </div>
-
-          {/* Measured numbers */}
           <div className="stats-row">
             <div className="stat-item">
               <div className="stat-num">0.94</div>
@@ -166,7 +171,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ── 2. THE PROBLEM ─────────────────────────────────────────── */}
+        {/* ── 2. THE PROBLEM ──────────────────────────────────────────────────── */}
         <section className="section" id="problem">
           <p className="section-label">The problem</p>
           <h2 className="section-h2">Exact-match counts names. Rotating names makes the loop unbounded.</h2>
@@ -211,7 +216,7 @@ export default function Home() {
           </p>
         </section>
 
-        {/* ── 3. HOW IT WORKS ────────────────────────────────────────── */}
+        {/* ── 3. HOW IT WORKS ─────────────────────────────────────────────────── */}
         <section className="section" id="how-it-works">
           <p className="section-label">How it works</p>
           <h2 className="section-h2">Three checks. Cheapest first.</h2>
@@ -268,7 +273,7 @@ export default function Home() {
           </p>
         </section>
 
-        {/* ── 4. WHAT IT LOOKS LIKE IN YOUR CODE ─────────────────────── */}
+        {/* ── 4. INTEGRATION ──────────────────────────────────────────────────── */}
         <section className="section" id="integration">
           <p className="section-label">Integration</p>
           <h2 className="section-h2">One line. Every framework.</h2>
@@ -293,7 +298,7 @@ export default function Home() {
           </p>
         </section>
 
-        {/* ── 5. RUNS ON YOUR MACHINE ────────────────────────────────── */}
+        {/* ── 5. PRIVACY ──────────────────────────────────────────────────────── */}
         <section className="section section-highlight" id="privacy">
           <p className="section-label">Privacy and data handling</p>
           <h2 className="section-h2">Runs on your machine. Nothing leaves.</h2>
@@ -344,7 +349,7 @@ export default function Home() {
           </p>
         </section>
 
-        {/* ── 6. QUICKSTART ──────────────────────────────────────────── */}
+        {/* ── 6. QUICKSTART ───────────────────────────────────────────────────── */}
         <section className="section" id="quickstart">
           <p className="section-label">Quick start</p>
           <h2 className="section-h2">Install, start, point your agent.</h2>
@@ -365,7 +370,7 @@ OPENAI_UPSTREAM=https://api.openai.com     killcord`}</pre>
           </div>
         </section>
 
-        {/* ── 7. LICENSING ───────────────────────────────────────────── */}
+        {/* ── 7. LICENSING ────────────────────────────────────────────────────── */}
         <section className="section" id="licensing">
           <p className="section-label">Licensing</p>
           <h2 className="section-h2">Free for personal and evaluation use.</h2>
@@ -389,14 +394,11 @@ OPENAI_UPSTREAM=https://api.openai.com     killcord`}</pre>
 
       </main>
 
-      {/* ── Footer ──────────────────────────────────────────────────── */}
+      {/* ── Footer ──────────────────────────────────────────────────────────── */}
       <footer className="site-footer">
         <div className="footer-inner">
           <div className="footer-left">
-            <span className="logo footer-logo">
-              <Mark size={16} className="footer-mark" />
-              killcord
-            </span>
+            <span className="logo">killcord</span>
             <span className="footer-copy">MIT 0.1.x · Driftflow LLC</span>
           </div>
           <nav className="footer-meta">
