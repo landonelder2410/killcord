@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import { CopyButton } from '../components/CopyButton';
 
 const GITHUB_URL  = 'https://github.com/landonelder2410/killcord';
@@ -39,7 +38,7 @@ export default function Home() {
       <header className="site-header">
         <div className="header-inner">
           <span className="logo">
-            <Image src="/logo.png" alt="" width={20} height={20} className="logo-img" priority unoptimized />
+            <img src="/logo.png" alt="" width={20} height={20} className="logo-img" />
             killcord
           </span>
           <nav className="header-links">
@@ -54,7 +53,7 @@ export default function Home() {
 
         {/* ── 1. HERO ─────────────────────────────────────────────────────── */}
         <section className="hero">
-          <Image src="/logo.png" alt="" width={56} height={56} className="hero-logo" priority unoptimized />
+          <img src="/logo.png" alt="" width={56} height={56} className="hero-logo" />
           <h1 className="hero-h1">killcord</h1>
           <p className="hero-sub">
             Agents that loop don't stop — they burn budget until something else breaks.
