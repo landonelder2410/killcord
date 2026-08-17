@@ -97,7 +97,7 @@ async function makeIconWithBg(size, outPath) {
   // Dark rounded-rect backdrop via SVG
   const bgSvg = Buffer.from(
     `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">` +
-    `<rect width="${size}" height="${size}" rx="${radius}" ry="${radius}" fill="#0a0a0a"/>` +
+    `<rect width="${size}" height="${size}" rx="${radius}" ry="${radius}" fill="#000000"/>` +
     `</svg>`
   );
 
@@ -124,7 +124,7 @@ const CODEBG = '#111111', BORDER = '#2a2a2a';
 
 const svgBase = Buffer.from(
   `<svg xmlns="http://www.w3.org/2000/svg" width="${W_OG}" height="${H_OG}">` +
-  `<rect width="${W_OG}" height="${H_OG}" fill="#0a0a0a"/>` +
+  `<rect width="${W_OG}" height="${H_OG}" fill="#000000"/>` +
   `<text x="80" y="232" font-family="ui-monospace,'Cascadia Code',monospace" ` +
     `font-size="108" font-weight="700" letter-spacing="-4" fill="${AMBER}">killcord</text>` +
   `<text x="80" y="308" font-family="ui-sans-serif,system-ui,sans-serif" ` +
