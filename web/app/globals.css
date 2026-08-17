@@ -102,7 +102,13 @@ code {
   color: var(--amber);
   letter-spacing: -0.03em;
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
 }
+.logo-mark { flex-shrink: 0; }
+.hero-mark { color: var(--amber); display: block; margin-bottom: 14px; }
+.footer-mark { color: var(--text-3); }
 .header-links {
   display: flex;
   align-items: center;

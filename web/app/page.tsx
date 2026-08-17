@@ -1,4 +1,5 @@
 import { CopyButton } from '../components/CopyButton';
+import Mark from '../components/Mark';
 
 const GITHUB_URL  = 'https://github.com/landonelder2410/killcord';
 const NPM_URL     = 'https://www.npmjs.com/package/killcord';
@@ -39,7 +40,10 @@ export default function Home() {
       {/* ── Header ────────────────────────────────────────────────────── */}
       <header className="site-header">
         <div className="header-inner">
-          <span className="logo">killcord</span>
+          <span className="logo">
+            <Mark height={16} className="logo-mark" />
+            killcord
+          </span>
           <nav className="header-links">
             <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">GitHub</a>
             <a href={NPM_URL}    target="_blank" rel="noopener noreferrer">npm</a>
@@ -52,6 +56,7 @@ export default function Home() {
 
         {/* ── 1. HERO ────────────────────────────────────────────────── */}
         <section className="hero">
+          <Mark height={40} className="hero-mark" />
           <h1 className="hero-h1">killcord</h1>
           <p className="hero-sub">
             Agents that loop don't stop — they burn budget until something else breaks.
@@ -388,7 +393,10 @@ OPENAI_UPSTREAM=https://api.openai.com     killcord`}</pre>
       <footer className="site-footer">
         <div className="footer-inner">
           <div className="footer-left">
-            <span className="logo">killcord</span>
+            <span className="logo footer-logo">
+              <Mark height={14} className="footer-mark" />
+              killcord
+            </span>
             <span className="footer-copy">MIT 0.1.x · Driftflow LLC</span>
           </div>
           <nav className="footer-meta">
