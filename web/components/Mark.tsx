@@ -1,21 +1,10 @@
-interface MarkProps {
-  height?: number;
-  className?: string;
-}
-
-export default function Mark({ height = 24, className }: MarkProps) {
-  const width = (height * 20) / 24;
+export function Mark({ size = 24, className = '' }: { size?: number; className?: string }) {
   return (
-    <svg
-      width={width}
-      height={height}
-      viewBox="0 0 20 24"
-      fill="currentColor"
-      aria-hidden="true"
-      className={className}
-    >
-      <polygon points="0,0 5,0 20,0 20,5 10,9 5,8.5 0,8" />
-      <polygon points="0,10 0,24 5,24 20,24 20,17 5,11 5,10.5" />
+    <svg viewBox="0 0 100 100" width={size} height={size} fill="none"
+         className={className} aria-hidden="true">
+      <rect x="14" y="10" width="18" height="80" fill="currentColor" />
+      <path d="M86 10 L52 50 L86 90" stroke="currentColor" strokeWidth="18"
+            strokeLinejoin="miter" fill="none" />
     </svg>
   );
 }

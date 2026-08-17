@@ -29,20 +29,15 @@ const MUTED  = '#a3a3a3';
 const CODEBG = '#1e1e1e';
 const BORDER = '#363636';
 
-// Geometric K mark — viewBox 0 0 20 24, scaled ×4, offset (80, 48)
-// Shape 1 (upper): stem-top + upper arm, cut by diagonal gap
-// Shape 2 (lower): stem-bottom + lower arm, cut by diagonal gap
-const S = 4, MX = 80, MY = 48;
-const pt = ([x, y]) => `${MX + x * S},${MY + y * S}`;
-const s1 = [[0,0],[5,0],[20,0],[20,5],[10,9],[5,8.5],[0,8]].map(pt).join(' ');
-const s2 = [[0,10],[0,24],[5,24],[20,24],[20,17],[5,11],[5,10.5]].map(pt).join(' ');
-
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
   <rect width="${W}" height="${H}" fill="${BG}"/>
 
-  <!-- Geometric K mark -->
-  <polygon points="${s1}" fill="${AMBER}"/>
-  <polygon points="${s2}" fill="${AMBER}"/>
+  <!-- Mark: vertical stem + detached chevron, viewBox 0 0 100 100 scaled to 90×90 -->
+  <svg x="80" y="40" width="90" height="90" viewBox="0 0 100 100">
+    <rect x="14" y="10" width="18" height="80" fill="${AMBER}"/>
+    <path d="M86 10 L52 50 L86 90" stroke="${AMBER}" stroke-width="18"
+          stroke-linejoin="miter" fill="none"/>
+  </svg>
 
   <!-- Wordmark -->
   <text
