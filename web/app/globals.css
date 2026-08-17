@@ -87,7 +87,7 @@ code {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: rgba(10, 10, 10, 0.92);
+  background: rgba(0, 0, 0, 0.96);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border);
 }
@@ -112,7 +112,7 @@ code {
   align-items: center;
   gap: 8px;
 }
-.logo-img { display: block; flex-shrink: 0; }
+.logo-img { display: block; flex-shrink: 0; background: #000; }
 .header-links {
   display: flex;
   align-items: center;
@@ -144,7 +144,7 @@ code {
 .hero { padding: 32px 0 16px; }
 @media (min-width: 640px) { .hero { padding: 48px 0 32px; } }
 
-.hero-logo { display: block; margin-bottom: 16px; }
+.hero-logo { display: block; margin-bottom: 16px; background: #000; }
 
 .hero-h1 {
   font-family: var(--font-mono);
