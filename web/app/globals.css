@@ -1,25 +1,20 @@
-/* ── Type scale — exactly 5 sizes ────────────────────────────────────────────
-   xs:   0.75rem  / 12px  — labels, section labels, pills, meta
-   sm:   0.875rem / 14px  — terminal, table cells, secondary prose, code
+/* ── Type scale — exactly 5 sizes ──────────────────────────────────────────
+   xs:   0.75rem  / 12px  — labels, pills, meta
+   sm:   0.875rem / 14px  — terminal, tables, secondary prose, code
    base: 1rem     / 16px  — body copy
-   lg:   1.5rem   / 24px  — section h2 (Space Grotesk 700)
+   lg:   1.5rem   / 24px  — section h2
    hero: 2.25rem  / 36px  — hero h1; 3rem / 48px at 640px+
 
-   Fonts:
-     --font-display  Space Grotesk — display/headings
-     --font-sans     Geist Sans — body
-     --font-mono     Geist Mono — wordmark, labels, terminal, code
+   Color roles (semantic only):
+     --amber  #f5a623                brand, trip states, section labels
+     --green  rgba(74,222,128,0.70)  pass / ok states
+     --trip   #ff6b35                TRIPPED + 429
 
-   Color roles (semantic only, no decorative use):
-     --amber  #f5a623                  brand, trip states, section labels
-     --green  rgba(74,222,128,0.70)    pass / ok states in terminal + tables
-     --trip   #ff6b35                  TRIPPED + 429 responses
-
-   Neutral greys — warmer than pure grey (slight warm shift):
-     --text   #e8e8e2  body text      15.5:1 ✓
-     --text-2 #a3a39d  secondary      7.3:1  ✓
-     --text-3 #8b8b85  muted          5.0:1  ✓
-   ────────────────────────────────────────────────────────────────────────── */
+   Contrast on #0a0a0a:
+     --text   #e8e8e2  ~15:1  ✓ AAA
+     --text-2 #a3a39d  ~7:1   ✓ AA
+     --text-3 #8b8b85  ~5:1   ✓ AA
+   ─────────────────────────────────────────────────────────────────────── */
 :root {
   --fs-xs:   0.75rem;
   --fs-sm:   0.875rem;
@@ -28,14 +23,14 @@
   --fs-hero: 2.25rem;
 
   --font-display: var(--font-space-grotesk), system-ui, -apple-system, sans-serif;
-  --font-sans: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, 'Cascadia Code', monospace;
+  --font-sans:    var(--font-geist-sans),    system-ui, -apple-system, sans-serif;
+  --font-mono:    var(--font-geist-mono),    ui-monospace, 'Cascadia Code', monospace;
 
-  --bg:      #000000;
-  --bg-alt:  #080808;
-  --bg-code: #0c0c0c;
-  --border:  #1a1a1a;
-  --border-2:#242424;
+  --bg:      #0a0a0a;
+  --bg-alt:  #101010;
+  --bg-code: #0d0d0d;
+  --border:  #1e1e1e;
+  --border-2:#2a2a2a;
   --text:    #e8e8e2;
   --text-2:  #a3a39d;
   --text-3:  #8b8b85;
@@ -43,13 +38,13 @@
   --green:   rgba(74, 222, 128, 0.70);
   --trip:    #ff6b35;
 
-  --term-bg:  #060606;
-  --term-bar: #0e0e0e;
+  --term-bg:  #0a0a0a;
+  --term-bar: #101010;
   --term-txt: #a3a39d;
   --term-hi:  #e8e8e2;
   --term-dim: #484844;
 
-  --max-w: 720px;
+  --max-w: 1100px;
   --px:    20px;
 }
 @media (min-width: 640px) {
@@ -87,7 +82,7 @@ code {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: rgba(0, 0, 0, 0.96);
+  background: rgba(10, 10, 10, 0.94);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border);
 }
@@ -95,7 +90,7 @@ code {
   max-width: calc(var(--max-w) + var(--px) * 2);
   margin: 0 auto;
   padding: 0 var(--px);
-  height: 48px;
+  height: 52px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -113,7 +108,7 @@ code {
   align-items: center;
   gap: 7px;
 }
-.logo-img { display: block; flex-shrink: 0; background: #000; }
+.logo-img { display: block; flex-shrink: 0; background: var(--bg); }
 .header-links {
   display: flex;
   align-items: center;
@@ -144,11 +139,41 @@ code {
   padding: 0 var(--px);
 }
 
-/* ── Hero ────────────────────────────────────────────────────────────────── */
-.hero { padding: 32px 0 16px; }
-@media (min-width: 640px) { .hero { padding: 48px 0 32px; } }
+/* ── Hero row ────────────────────────────────────────────────────────────────
+   Single column on mobile; two equal columns at ≥1024px.
+   The ONLY gradient allowed: very-low-opacity amber radial behind hero. */
+.hero-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  padding: 32px 0 0;
+  /* subtle amber glow — sole gradient on the page */
+  background: radial-gradient(
+    ellipse 55% 70% at -5% 50%,
+    rgba(245, 166, 35, 0.055) 0%,
+    transparent 65%
+  );
+}
+@media (min-width: 640px) { .hero-row { padding-top: 48px; } }
+@media (min-width: 1024px) {
+  .hero-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 56px;
+    align-items: center;
+    padding: 80px 0 72px;
+  }
+  .hero-row .demo-wrap {
+    border-top: none;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+}
 
-.hero-logo { display: block; margin-bottom: 16px; background: #000; }
+/* ── Hero ────────────────────────────────────────────────────────────────── */
+.hero { padding: 0 0 28px; }
+@media (min-width: 640px) { .hero { padding-bottom: 40px; } }
+@media (min-width: 1024px) { .hero { padding: 0; } }
+
+.hero-logo { display: block; margin-bottom: 20px; background: var(--bg); }
 
 .hero-h1 {
   font-family: var(--font-mono);
@@ -161,7 +186,6 @@ code {
 }
 .hero-sub {
   font-size: var(--fs-base);
-  font-weight: 400;
   color: var(--text-2);
   max-width: 520px;
   line-height: 1.65;
@@ -231,9 +255,10 @@ code {
 /* ── Terminal demo ───────────────────────────────────────────────────────── */
 .demo-wrap {
   border-top: 1px solid var(--border);
-  padding-top: 20px;
-  padding-bottom: 4px;
+  padding: 24px 0 32px;
 }
+@media (min-width: 640px) { .demo-wrap { padding: 28px 0 40px; } }
+
 .demo-terminal {
   background: var(--term-bg);
   border: 1px solid var(--border-2);
@@ -279,8 +304,17 @@ code {
 .t-str   { color: var(--text-2); }
 .t-num   { color: var(--text); }
 
-/* ── Evidence block — comparison table + stats ───────────────────────────── */
-.evidence-block { padding: 20px 0 0; }
+/* ── Evidence block — capability table + stat row ────────────────────────── */
+.evidence-block {
+  border-top: 1px solid var(--border);
+  background: var(--bg-alt);
+  margin-left: calc(-1 * var(--px));
+  margin-right: calc(-1 * var(--px));
+  padding: 28px var(--px);
+}
+@media (min-width: 640px) {
+  .evidence-block { padding-top: 40px; padding-bottom: 40px; }
+}
 
 .cap-table-wrap {
   overflow-x: auto;
@@ -289,6 +323,7 @@ code {
 }
 .cap-table {
   min-width: 500px;
+  width: 100%;
   border: 1px solid var(--border-2);
   border-radius: 6px 6px 0 0;
   overflow: hidden;
@@ -298,12 +333,12 @@ code {
 }
 .cap-header, .cap-row {
   display: grid;
-  grid-template-columns: 130px repeat(4, 1fr);
+  grid-template-columns: 140px repeat(4, 1fr);
   border-bottom: 1px solid var(--border);
 }
 .cap-row:last-child { border-bottom: none; }
 .cap-header {
-  background: var(--bg-alt);
+  background: var(--bg);
   border-bottom: 1px solid var(--border-2);
 }
 .cap-header span, .cap-row span {
@@ -311,7 +346,7 @@ code {
   display: flex;
   align-items: center;
 }
-.cap-h-label { }
+.cap-h-label {}
 .cap-header span:not(.cap-h-label) {
   font-size: 10px;
   font-weight: 700;
@@ -320,10 +355,10 @@ code {
   color: var(--text-3);
 }
 .cap-label   { color: var(--text-2); font-weight: 600; }
-.cap-yes     { color: var(--green); font-weight: 700; }
+.cap-yes     { color: var(--green);  font-weight: 700; }
 .cap-no      { color: var(--text-3); }
 .cap-cost    { color: var(--text-3); font-style: italic; font-size: 10px; }
-.cap-row--killcord { background: rgba(245, 166, 35, 0.04); border-top: 1px solid var(--border-2); }
+.cap-row--killcord { background: rgba(245,166,35,0.04); border-top: 1px solid var(--border-2); }
 .cap-row--killcord .cap-label { color: var(--amber); }
 
 .stats-row {
@@ -335,13 +370,12 @@ code {
   border-top: none;
   border-radius: 0 0 6px 6px;
   overflow: hidden;
-  margin-bottom: 0;
 }
 @media (min-width: 480px) {
   .stats-row { grid-template-columns: repeat(4, 1fr); }
 }
 .stat-item {
-  background: var(--bg-alt);
+  background: var(--bg);
   padding: 12px 16px;
 }
 .stat-num {
@@ -361,10 +395,10 @@ code {
 }
 
 /* ── Sections ────────────────────────────────────────────────────────────── */
-.section { padding: 32px 0; border-top: 1px solid var(--border); }
-@media (min-width: 640px) { .section { padding: 48px 0; } }
+.section { padding: 28px 0; border-top: 1px solid var(--border); }
+@media (min-width: 640px) { .section { padding: 40px 0; } }
 
-/* Alternating surface — extends to edges of the content column */
+/* Alt section — extends bg to column edges via negative side margins */
 .section-alt {
   background: var(--bg-alt);
   margin-left: calc(-1 * var(--px));
@@ -373,14 +407,15 @@ code {
   padding-right: var(--px);
 }
 
+/* Highlighted section — full-bleed bg with top+bottom borders */
 .section-highlight {
   background: var(--bg-alt);
   margin: 0 calc(-1 * var(--px));
-  padding: 32px var(--px);
+  padding: 28px var(--px);
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
 }
-@media (min-width: 640px) { .section-highlight { padding: 48px var(--px); } }
+@media (min-width: 640px) { .section-highlight { padding: 40px var(--px); } }
 
 .section-label {
   font-family: var(--font-mono);
@@ -389,22 +424,22 @@ code {
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--amber);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 .section-h2 {
   font-family: var(--font-display);
   font-size: var(--fs-lg);
   font-weight: 700;
   letter-spacing: -0.035em;
-  line-height: 1.0;
+  line-height: 1.1;
   color: var(--text);
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 .section-body {
   font-size: var(--fs-base);
   color: var(--text-2);
-  margin-bottom: 14px;
-  max-width: 600px;
+  margin-bottom: 12px;
+  max-width: 680px;
   line-height: 1.65;
 }
 .section-body:last-child { margin-bottom: 0; }
@@ -425,7 +460,7 @@ code {
   border: 1px solid var(--border-2);
   border-radius: 6px;
   overflow: hidden;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
   font-size: var(--fs-sm);
   font-variant-numeric: tabular-nums;
 }
@@ -434,7 +469,7 @@ code {
   grid-template-columns: 1fr auto auto;
   gap: 16px;
   padding: 9px 16px;
-  background: var(--bg-alt);
+  background: var(--bg);
   border-bottom: 1px solid var(--border-2);
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
@@ -475,7 +510,6 @@ code {
   font-size: var(--fs-xs);
   white-space: nowrap;
   text-align: center;
-  font-variant-numeric: tabular-nums;
 }
 
 /* ── Checks list ─────────────────────────────────────────────────────────── */
@@ -483,8 +517,8 @@ code {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  margin-bottom: 18px;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 .checks-list li { display: flex; gap: 12px; align-items: flex-start; }
 .check-num {
@@ -515,7 +549,7 @@ code {
   border: 1px solid var(--border-2);
   border-radius: 6px;
   overflow: hidden;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
   position: relative;
 }
 .code-block .copy-btn {
@@ -543,12 +577,16 @@ code {
   font-variant-numeric: tabular-nums;
 }
 
-/* ── Integration snippet cards ───────────────────────────────────────────── */
+/* ── Integration snippet cards — stacked mobile, 3-col at ≥900px ─────────── */
 .code-stacks {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin: 14px 0;
+  margin: 12px 0;
+}
+@media (min-width: 900px) {
+  .code-stacks { flex-direction: row; align-items: stretch; }
+  .snippet-card { flex: 1 1 0; min-width: 0; }
 }
 .snippet-card {
   background: var(--bg-code);
@@ -591,12 +629,19 @@ code {
   padding: 0 10px;
 }
 
-/* ── Privacy grid ────────────────────────────────────────────────────────── */
+/* ── Privacy grid — 1-col mobile, 2-col at ≥900px ───────────────────────── */
 .privacy-grid {
   display: flex;
   flex-direction: column;
   gap: 14px;
   margin: 16px 0;
+}
+@media (min-width: 900px) {
+  .privacy-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px 56px;
+  }
 }
 .privacy-item {
   display: flex;
@@ -617,7 +662,7 @@ code {
 }
 
 /* ── License pills ───────────────────────────────────────────────────────── */
-.license-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.license-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
 .pill {
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
@@ -636,7 +681,7 @@ code {
 .footer-inner {
   max-width: calc(var(--max-w) + var(--px) * 2);
   margin: 0 auto;
-  padding: 18px var(--px);
+  padding: 20px var(--px);
   display: flex;
   align-items: center;
   justify-content: space-between;

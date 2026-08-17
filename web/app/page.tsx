@@ -51,7 +51,10 @@ export default function Home() {
 
       <main className="main-col">
 
-        {/* ── 1. HERO ─────────────────────────────────────────────────────── */}
+        {/* ── HERO ROW: left=brand, right=terminal at ≥1024px ──────────────── */}
+        <div className="hero-row">
+
+        {/* left col */}
         <section className="hero">
           <img src="/logo.png" alt="" width={56} height={56} className="hero-logo" />
           <h1 className="hero-h1">killcord</h1>
@@ -70,8 +73,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── TERMINAL DEMO ───────────────────────────────────────────────────
-            All lines ≤ 30ch at 14px Geist Mono. */}
+        {/* right col: terminal, vertically centered */}
         <div className="demo-wrap">
           <div className="demo-terminal">
             <div className="demo-titlebar">
@@ -102,7 +104,9 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ── EVIDENCE: capability table + stats + integration ─────────────── */}
+        </div>{/* /hero-row */}
+
+        {/* ── EVIDENCE: capability table + stat row ────────────────────────── */}
         <div className="evidence-block">
 
           {/* Capability comparison — honest on the "needs daemon" column */}
